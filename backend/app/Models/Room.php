@@ -1,0 +1,20 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class Room extends Model
+{
+    protected $fillable = [
+        'cinema_id',
+        'name',
+        'total_seats',
+    ];
+
+    public function cinema(): BelongsTo
+    {
+        return $this->belongsTo(Cinema::class);
+    }
+}
