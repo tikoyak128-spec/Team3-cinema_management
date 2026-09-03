@@ -3,36 +3,25 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Showtime extends Model
 {
     protected $fillable = [
         'movie_id',
-        'cinema_room_id',
+        'room_id',
         'start_time',
         'end_time',
         'price',
-        'status',
     ];
 
-    protected $casts = [
-        'start_time' => 'datetime',
-        'end_time' => 'datetime',
-        'price' => 'decimal:2',
-    ];
-
-    public function movie()
+    public function movie(): BelongsTo
     {
         return $this->belongsTo(Movie::class);
     }
 
-    public function room()
+    public function room(): BelongsTo
     {
-        return $this->belongsTo(Room::class, 'cinema_room_id');
-    }
-
-    public function bookings()
-    {
-        return $this->hasMany(Booking::class);
+        return $this->belongsTo(Room::class);
     }
 }
