@@ -13,10 +13,10 @@ return new class extends Migration
     {
         Schema::create('seats', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('cinema_room_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('room_id')->constrained()->cascadeOnDelete();
             $table->string('seat_number');
             $table->enum('seat_type', ['regular', 'vip', 'couple'])->default('regular');
-            $table->unique(['cinema_room_id', 'seat_number']);
+            $table->unique(['room_id', 'seat_number']);
             $table->timestamps();
         });
     }

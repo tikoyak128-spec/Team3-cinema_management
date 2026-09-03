@@ -11,11 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('movie_categories', function (Blueprint $table) {
+        Schema::create('tickets', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('movie_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('category_id')->constrained()->cascadeOnDelete();
-            $table->unique(['movie_id', 'category_id']);
+            $table->foreignId('booking_id')->constrained()->cascadeOnDelete();
+            $table->string('ticket_code')->unique();
+            $table->decimal('price', 8, 2);
+            $table->string('seat_number');
+            $table->enum('status', ['valid', 'checked_in', 'cancelled'])->default('valid');
             $table->timestamps();
         });
     }
@@ -25,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('movie_categories');
+        Schema::dropIfExists('tickets');
     }
 };

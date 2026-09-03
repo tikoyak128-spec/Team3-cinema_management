@@ -3,39 +3,23 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Category;
 
 class Movie extends Model
 {
     protected $fillable = [
-        'movie_category_id',
+        'category_id',
         'title',
         'description',
         'duration',
         'release_date',
-        'poster',
+        'poster_url',
         'trailer_url',
-        'rating',
-        'status',
     ];
 
-    protected $casts = [
-        'duration' => 'integer',
-        'release_date' => 'date',
-        'rating' => 'float',
-    ];
-
-    public function category()
+    public function category(): BelongsTo
     {
-        return $this->belongsTo(MovieCategory::class, 'movie_category_id');
-    }
-
-    public function showtimes()
-    {
-        return $this->hasMany(Showtime::class);
-    }
-
-    public function reviews()
-    {
-        return $this->hasMany(Review::class);
+        return $this->belongsTo(Category::class);
     }
 }

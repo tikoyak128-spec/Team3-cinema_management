@@ -1,4 +1,5 @@
 import { createContext, useContext, useState } from "react";
+import api from "../api/client";
 
 const AuthContext = createContext(null);
 const STORAGE_KEY = "khmer_cinema_user";
@@ -13,19 +14,40 @@ export function AuthProvider({ children }) {
     }
   });
 
-  const login = (userData) => {
-    const next = { role: "customer", ...userData };
-    setUser(next);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  const persist = (nextUser) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
+    setUser(nextUser);
   };
 
-  const logout = () => {
-    setUser(null);
+  const login = (userData) => {
+    const next = { role: userData.role || "customer", ...userData };
+    persist(next);
+  };
+
+  const loginWithToken = ({ token, user: profile }) => {
+    persist({ ...profile, token });
+  };
+
+  const logout = async () => {
+    try {
+      await api.post("/logout");
+    } catch {
+      // ignore network errors on logout
+    }
     localStorage.removeItem(STORAGE_KEY);
+    setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        loginWithToken,
+        logout,
+        isAuthenticated: !!user,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

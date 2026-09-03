@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import api from "../api/client";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 
 function getRoleFromEmail(email = "") {
@@ -12,16 +13,12 @@ function getRoleFromEmail(email = "") {
 
 export default function CinemaLogin() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const { login } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { login, loginWithToken } = useAuth();
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError("");
-  };
+  const [submitting, setSubmitting] = useState(false);
 
   const goAfterLogin = (role) => {
     const redirect = searchParams.get("redirect");
@@ -34,7 +31,46 @@ export default function CinemaLogin() {
     else navigate("/", { replace: true });
   };
 
-  const handleSubmit = (e) => {
+  // Handle Google OAuth callback payload: /login?google=<urlencoded {token,user}>
+  useEffect(() => {
+    const googlePayload = searchParams.get("google");
+    if (!googlePayload) return;
+
+    let errorMessage = "";
+    try {
+      const data = JSON.parse(decodeURIComponent(googlePayload));
+      if (data && data.token && data.user) {
+        loginWithToken(data);
+        goAfterLogin(data.user.role);
+        return;
+      }
+      errorMessage = "Something went wrong during Google sign in.";
+    } catch {
+      errorMessage = "Something went wrong during Google sign in.";
+    }
+
+    if (errorMessage) {
+      setSearchParams({}, { replace: true });
+      queueMicrotask(() => setError(errorMessage));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError("");
+  };
+
+  const handleGoogle = (e) => {
+    e.preventDefault();
+    const redirect = searchParams.get("redirect");
+    const base = "/api/auth/google";
+    window.location.href = redirect
+      ? `${base}?redirect=${encodeURIComponent(redirect)}`
+      : base;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const email = formData.email.trim();
@@ -43,16 +79,28 @@ export default function CinemaLogin() {
       return;
     }
 
-    const role = getRoleFromEmail(email);
+    setSubmitting(true);
+    setError("");
+    try {
+      const { data } = await api.post("/login", {
+        email,
+        password: formData.password,
+      });
 
-    if ((role === "admin" || role === "staff") && formData.password.length < 6) {
+      if (data && data.token && data.user) {
+        login({ ...data.user, token: data.token });
+        goAfterLogin(data.user.role || getRoleFromEmail(email));
+        return;
+      }
       setError("Invalid credentials. Please check your email and password.");
-      return;
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          "Invalid credentials. Please check your email and password."
+      );
+    } finally {
+      setSubmitting(false);
     }
-
-    const name = email.split("@")[0] || "Cinema Fan";
-    login({ name, email, role });
-    goAfterLogin(role);
   };
 
   return (
@@ -119,10 +167,26 @@ export default function CinemaLogin() {
             </div>
           </div>
 
-          <button type="submit" style={styles.submitBtn}>
-            Sign In
+          <button type="submit" style={styles.submitBtn} disabled={submitting}>
+            {submitting ? "Signing in..." : "Sign In"}
           </button>
         </form>
+
+        <div style={styles.dividerRow}>
+          <span style={styles.dividerLine} />
+          <span style={styles.dividerText}>or</span>
+          <span style={styles.dividerLine} />
+        </div>
+
+        <button type="button" onClick={handleGoogle} style={styles.googleBtn}>
+          <svg width="18" height="18" viewBox="0 0 48 48" style={styles.googleIcon}>
+            <path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.2 29.4 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/>
+            <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.2 29.4 4 24 4 16.3 4 9.6 8.3 6.3 14.7z"/>
+            <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.3 44 24 44z"/>
+            <path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4 5.5l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/>
+          </svg>
+          Sign in with Google
+        </button>
 
         <div style={styles.footerText}>
           Don't have an account?{" "}
@@ -293,6 +357,43 @@ const styles = {
     marginTop: "10px",
     boxShadow: "0 4px 15px rgba(229, 9, 20, 0.4)",
     transition: "background 0.2s",
+  },
+  dividerRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    margin: "20px 0 4px",
+  },
+  dividerLine: {
+    flex: 1,
+    height: "1px",
+    backgroundColor: "#2a2a2a",
+  },
+  dividerText: {
+    fontSize: "12px",
+    color: "#777777",
+    textTransform: "uppercase",
+    letterSpacing: "1px",
+  },
+  googleBtn: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "10px",
+    width: "100%",
+    backgroundColor: "#ffffff",
+    color: "#1a1a1a",
+    border: "1px solid #2a2a2a",
+    borderRadius: "10px",
+    padding: "12px",
+    fontSize: "14px",
+    fontWeight: "600",
+    cursor: "pointer",
+    marginTop: "12px",
+    transition: "background 0.2s, border-color 0.2s",
+  },
+  googleIcon: {
+    flexShrink: 0,
   },
   footerText: {
     marginTop: "24px",
