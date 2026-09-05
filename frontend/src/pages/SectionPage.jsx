@@ -10,7 +10,8 @@ import {
   cinemas,
 } from "../data/cinemaData";
 import styles from "../styles/homeStyles";
-import { Clapperboard, MapPin, Play } from "lucide-react";
+import { ArrowRight, Clapperboard, MapPin, Play } from "lucide-react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 export default function SectionPage({ sections = [] }) {
   const navigate = useNavigate();
@@ -232,13 +233,15 @@ export default function SectionPage({ sections = [] }) {
                   {promo.isImage ? (
                     <img className="home-promo-icon-img" src={promo.icon} alt={promo.title} />
                   ) : (
-                    <div className="home-promo-icon">{promo.icon}</div>
+                    <div className="home-promo-icon">
+                      <FontAwesomeIcon icon={promo.icon} />
+                    </div>
                   )}
                   <span className="home-promo-tag">{promo.tag}</span>
                   <h3 className="home-promo-title">{promo.title}</h3>
                   <p className="home-promo-text">{promo.text}</p>
                   <a href="#" className="home-promo-link">
-                    Learn More →
+                    Learn More <ArrowRight size={14} />
                   </a>
                 </div>
               ))}
