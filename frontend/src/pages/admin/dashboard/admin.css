@@ -159,6 +159,13 @@
   white-space: nowrap;
 }
 
+.kc-table th {
+  position: sticky;
+  top: 70px;
+  z-index: 5;
+  background: #111111;
+}
+
 .kc-table tbody td {
   padding: 14px 18px;
   border-bottom: 1px solid #1a1a1a;

@@ -5,7 +5,7 @@ const styles = `
     background: #050505;
     color: #ffffff;
     min-height: 100vh;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   .home-page * { box-sizing: border-box; }
@@ -776,6 +776,9 @@ const styles = `
     font-weight: 700;
     text-decoration: none;
     margin-top: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
   }
 
   .home-promo-link:hover {

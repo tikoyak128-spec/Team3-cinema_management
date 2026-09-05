@@ -1,4 +1,7 @@
+import { faBowlFood, faGraduationCap, faTicket } from "@fortawesome/free-solid-svg-icons";
+
 export const navLinks = [
+  { label: "Home", to: "/" },
   { label: "About", to: "/about" },
   { label: "Showtimes", to: "/showtimes" },
   { label: "Now Showing", to: "/now-showing" },
@@ -133,22 +136,22 @@ export const comingSoon = [
 
 export const promotions = [
   {
-    icon: "/src/img/popcorn.png",
-    isImage: true,
+    icon: faBowlFood,
+    isImage: false,
     title: "Premium Cheese Popcorn is here!",
     text: "Cheese lovers, get ready for our special new snack.",
     tag: "Food & Beverage",
   },
   {
-    icon: "/src/img/coupon.png",
-    isImage: true,
+    icon: faTicket,
+    isImage: false,
     title: "Special price from our new cinema!",
     text: "Enjoy exclusive launch offers at our brand new location.",
     tag: "Promotion",
   },
   {
-    icon: "/src/img/graduation.png",
-    isImage: true,
+    icon: faGraduationCap,
+    isImage: false,
     title: "Special Rates for Students!",
     text: "Show your student ID to unlock discounted tickets.",
     tag: "Student",
