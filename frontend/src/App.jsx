@@ -6,6 +6,8 @@ import StaffLayout from './layouts/StaffLayout'
 import Login from './login/Login'
 import Register from './login/Register'
 import ForgotPassword from './login/ForgotPassword'
+import ResetPassword from './login/ResetPassword'
+import VerifyOtp from './login/VerifyOtp'
 import Home from './pages/Home'
 import SectionPage from './pages/SectionPage'
 import Booking from './pages/Booking'
@@ -48,6 +50,8 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/verify-otp" element={<VerifyOtp />} />
           <Route
             path="/booking/:movieTitle"
             element={
