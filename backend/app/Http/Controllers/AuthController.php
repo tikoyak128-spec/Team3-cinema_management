@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Notifications\OtpNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\Rule;
 use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Str;
@@ -24,20 +27,167 @@ class AuthController extends Controller
             'role' => ['sometimes', 'string', Rule::in(['admin', 'staff', 'customer'])],
         ]);
 
+        $otpCode = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $otpExpiresAt = now()->addMinutes(10);
+
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => $validated['password'],
             'phone' => $validated['phone'] ?? null,
-            'role' => $validated['role'] ?? 'customer',
+            'role' => 'customer',
+            'otp' => $otpCode,
+            'otp_expires_at' => $otpExpiresAt,
+        ]);
+
+        try {
+            $user->notify(new OtpNotification($otpCode));
+        } catch (\Throwable $e) {
+            Log::warning('Failed to send OTP email: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'message' => 'Account created. Please verify your email with the OTP code sent.',
+            'email' => $user->email,
+        ], 201);
+    }
+
+    public function verifyOtp(Request $request): JsonResponse
+    {
+        $request->validate([
+            'email' => ['required', 'string', 'email'],
+            'otp' => ['required', 'string', 'digits:6'],
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found.'], 404);
+        }
+
+        if ($user->email_verified_at) {
+            return response()->json(['message' => 'Email already verified.'], 400);
+        }
+
+        if (!$user->otp || !$user->otp_expires_at) {
+            return response()->json(['message' => 'No OTP found. Please request a new one.'], 400);
+        }
+
+        if ($user->otp_expires_at->isPast()) {
+            return response()->json(['message' => 'OTP has expired. Please request a new one.'], 400);
+        }
+
+        if (!hash_equals($user->otp, $request->otp)) {
+            return response()->json(['message' => 'Invalid OTP code.'], 400);
+        }
+
+        $user->update([
+            'otp' => null,
+            'otp_expires_at' => null,
+            'email_verified_at' => now(),
         ]);
 
         $token = $user->createToken('auth-token')->plainTextToken;
 
         return response()->json([
+            'message' => 'Email verified successfully.',
             'user' => $user,
             'token' => $token,
-        ], 201);
+        ]);
+    }
+
+    public function resendOtp(Request $request): JsonResponse
+    {
+        $request->validate([
+            'email' => ['required', 'string', 'email'],
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found.'], 404);
+        }
+
+        if ($user->email_verified_at) {
+            return response()->json(['message' => 'Email already verified.'], 400);
+        }
+
+        $otpCode = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $otpExpiresAt = now()->addMinutes(10);
+
+        $user->update([
+            'otp' => $otpCode,
+            'otp_expires_at' => $otpExpiresAt,
+        ]);
+
+        try {
+            $user->notify(new OtpNotification($otpCode));
+        } catch (\Throwable $e) {
+            Log::warning('Failed to send OTP email: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'message' => 'A new OTP code has been sent to your email.',
+        ]);
+    }
+
+    public function forgotPassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'email' => ['required', 'string', 'email'],
+        ]);
+
+        $status = Password::sendResetLink(
+            $request->only('email')
+        );
+
+        if ($status === Password::RESET_LINK_SENT) {
+            return response()->json([
+                'message' => 'Password reset link sent to your email.',
+            ]);
+        }
+
+        if ($status === Password::RESET_THROTTLED) {
+            return response()->json([
+                'message' => 'Too many requests. Please wait a minute before trying again.',
+            ], 429);
+        }
+
+        return response()->json([
+            'message' => 'If an account exists for that email, a password reset link will be sent.',
+        ]);
+    }
+
+    public function resetPassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'token' => ['required', 'string'],
+            'email' => ['required', 'string', 'email'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function ($user, $password) {
+                $user->forceFill([
+                    'password' => Hash::make($password),
+                ])->setRememberToken(Str::random(60));
+
+                $user->save();
+
+                event(new PasswordReset($user));
+            }
+        );
+
+        if ($status === Password::PASSWORD_RESET) {
+            return response()->json([
+                'message' => 'Password has been reset successfully.',
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'This password reset link is invalid or has expired. Please request a new one.',
+        ], 400);
     }
 
     public function login(Request $request): JsonResponse
@@ -53,6 +203,14 @@ class AuthController extends Controller
             return response()->json([
                 'message' => 'Invalid credentials',
             ], 401);
+        }
+
+        if (!$user->email_verified_at) {
+            return response()->json([
+                'message' => 'Please verify your email before logging in.',
+                'requires_verification' => true,
+                'email' => $user->email,
+            ], 403);
         }
 
         $token = $user->createToken('auth-token')->plainTextToken;

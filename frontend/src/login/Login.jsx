@@ -94,6 +94,11 @@ export default function CinemaLogin() {
       }
       setError("Invalid credentials. Please check your email and password.");
     } catch (err) {
+      const resp = err?.response?.data;
+      if (resp?.requires_verification) {
+        navigate(`/verify-otp?email=${encodeURIComponent(resp.email || email)}`);
+        return;
+      }
       setError(
         err?.response?.data?.message ||
           "Invalid credentials. Please check your email and password."

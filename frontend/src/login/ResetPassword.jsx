@@ -1,38 +1,49 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { ArrowLeft, Mail } from "lucide-react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { ArrowLeft, KeyRound, Lock } from "lucide-react";
 import api from "../api/client";
 
-export default function ForgotPassword() {
-  const [email, setEmail] = useState("");
-  const [error, setError] = useState("");
-  const [sent, setSent] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+export default function ResetPassword() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get("token") || "";
+  const email = searchParams.get("email") || "";
 
-  const handleChange = (e) => {
-    setEmail(e.target.value);
-    setError("");
-    setSent(false);
-  };
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email.trim()) {
-      setError("Please enter your email address.");
+    if (!token || !email) {
+      setError("This password reset link is invalid or incomplete.");
       return;
     }
-    if (!email.includes("@")) {
-      setError("Please enter a valid email address.");
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
       return;
     }
 
     setSubmitting(true);
     setError("");
+    setSuccess("");
     try {
-      await api.post("/forgot-password", { email });
-      setSent(true);
+      await api.post("/reset-password", {
+        token,
+        email,
+        password,
+        password_confirmation: confirmPassword,
+      });
+      setSuccess("Your password has been reset. Redirecting to sign in...");
+      setTimeout(() => navigate("/login", { replace: true }), 1800);
     } catch (err) {
-      setError(err?.response?.data?.message || "Failed to send reset link. Please try again.");
+      setError(err?.response?.data?.message || "Failed to reset password. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -49,47 +60,57 @@ export default function ForgotPassword() {
           <span style={styles.logoSub}>CINEMA</span>
         </div>
 
-        <h2 style={styles.title}>{sent ? "Check Your Email" : "Forgot Password"}</h2>
+        <div style={styles.iconWrap}>
+          <KeyRound size={36} color="#e50914" />
+        </div>
+
+        <h2 style={styles.title}>Reset Password</h2>
         <p style={styles.subtitle}>
-          {sent
-            ? "We sent a password reset link to your email address."
-            : "Enter your email and we'll send you a reset link."}
+          Enter a new password for
+          <br />
+          <strong style={{ color: "#ffffff" }}>{email || "your account"}</strong>
         </p>
 
-        {sent ? (
-          <div style={styles.successMsg}>
-            A password reset link has been sent to{" "}
-            <strong style={{ color: "#ffffff" }}>{email}</strong>. Please check your
-            inbox and follow the instructions.
+        {error && <div style={styles.errorMsg}>{error}</div>}
+        {success && <div style={styles.successMsg}>{success}</div>}
+
+        <form onSubmit={handleSubmit} style={styles.form}>
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>New Password</label>
+            <div style={styles.inputWrapper}>
+              <span style={styles.inputIcon}><Lock size={16} /></span>
+              <input
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                style={styles.input}
+              />
+            </div>
           </div>
-        ) : (
-          <>
-            {error && <div style={styles.errorMsg}>{error}</div>}
 
-            <form onSubmit={handleSubmit} style={styles.form}>
-              <div style={styles.inputGroup}>
-                <label style={styles.label}>Email Address</label>
-                <div style={styles.inputWrapper}>
-                  <span style={styles.inputIcon}><Mail size={16} /></span>
-                  <input
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={handleChange}
-                    required
-                    style={styles.input}
-                  />
-                </div>
-              </div>
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Confirm New Password</label>
+            <div style={styles.inputWrapper}>
+              <span style={styles.inputIcon}><Lock size={16} /></span>
+              <input
+                type="password"
+                placeholder="••••••••"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                style={styles.input}
+              />
+            </div>
+          </div>
 
-              <button type="submit" style={styles.submitBtn} disabled={submitting}>
-                {submitting ? "Sending..." : "Send Reset Link"}
-              </button>
-            </form>
-          </>
-        )}
+          <button type="submit" style={styles.submitBtn} disabled={submitting}>
+            {submitting ? "Resetting..." : "Reset Password"}
+          </button>
+        </form>
 
-        <div style={styles.backRow}>
+        <div style={styles.footerText}>
           <Link to="/login" style={styles.backLink}>
             <ArrowLeft size={14} /> Back to Sign In
           </Link>
@@ -147,7 +168,7 @@ const styles = {
   brandLogo: {
     textAlign: "center",
     lineHeight: "1",
-    marginBottom: "24px",
+    marginBottom: "20px",
   },
   logoPrimary: {
     display: "block",
@@ -162,6 +183,11 @@ const styles = {
     color: "#e50914",
     fontWeight: "700",
   },
+  iconWrap: {
+    display: "flex",
+    justifyContent: "center",
+    marginBottom: "16px",
+  },
   title: {
     fontSize: "22px",
     fontWeight: "800",
@@ -173,6 +199,7 @@ const styles = {
     color: "#777777",
     textAlign: "center",
     marginBottom: "24px",
+    lineHeight: "1.6",
   },
   errorMsg: {
     backgroundColor: "rgba(229, 9, 20, 0.15)",
@@ -186,14 +213,15 @@ const styles = {
     marginBottom: "16px",
   },
   successMsg: {
-    backgroundColor: "rgba(34, 197, 94, 0.12)",
+    backgroundColor: "rgba(34, 197, 94, 0.15)",
     border: "1px solid rgba(34, 197, 94, 0.4)",
-    color: "#86efac",
-    fontSize: "13px",
-    lineHeight: "1.5",
+    color: "#22c55e",
+    fontSize: "12px",
+    fontWeight: "600",
     textAlign: "center",
-    padding: "14px",
+    padding: "10px",
     borderRadius: "8px",
+    marginBottom: "16px",
   },
   form: {
     display: "flex",
@@ -245,14 +273,14 @@ const styles = {
     boxShadow: "0 4px 15px rgba(229, 9, 20, 0.4)",
     transition: "background 0.2s",
   },
-  backRow: {
+  footerText: {
     marginTop: "24px",
     textAlign: "center",
+    fontSize: "13px",
+    color: "#666666",
   },
   backLink: {
-    color: "#777777",
-    fontSize: "13px",
-    fontWeight: "600",
+    color: "#aaaaaa",
     textDecoration: "none",
     display: "inline-flex",
     alignItems: "center",

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Eye, EyeOff, Lock, Mail, Phone, User } from "lucide-react";
+import api from "../api/client";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -13,13 +14,14 @@ export default function Register() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setError("");
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const { name, email, phone, password, confirmPassword } = formData;
 
@@ -33,15 +35,28 @@ export default function Register() {
       return;
     }
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
       return;
     }
 
-    console.log("Registering account:", { name, email, phone, password });
-
-    alert("Account created successfully! Please sign in.");
-    navigate("/login");
+    setSubmitting(true);
+    setError("");
+    try {
+      await api.post("/register", { name, email, phone: phone || undefined, password, password_confirmation: confirmPassword });
+      navigate(`/verify-otp?email=${encodeURIComponent(email)}`);
+    } catch (err) {
+      const msg = err?.response?.data?.message;
+      const errors = err?.response?.data?.errors;
+      if (errors) {
+        const first = Object.values(errors)[0];
+        setError(Array.isArray(first) ? first[0] : msg || "Registration failed.");
+      } else {
+        setError(msg || "Registration failed. Please try again.");
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -150,8 +165,8 @@ export default function Register() {
             </div>
           </div>
 
-          <button type="submit" style={styles.submitBtn}>
-            Create Account
+          <button type="submit" style={styles.submitBtn} disabled={submitting}>
+            {submitting ? "Creating Account..." : "Create Account"}
           </button>
         </form>
 
