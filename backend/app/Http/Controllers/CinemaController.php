@@ -42,6 +42,17 @@ class CinemaController extends Controller
                 'required',
                 'string'
             ],
+            'address' => ['nullable', 'string'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'email' => ['nullable', 'email'],
+            'website' => ['nullable', 'url'],
+            'status' => ['sometimes', 'string', Rule::in(['active', 'inactive'])],
+            'halls' => ['sometimes', 'integer', 'min:0'],
+            'seats' => ['sometimes', 'integer', 'min:0'],
+            'opening_time' => ['nullable', 'date_format:H:i'],
+            'closing_time' => ['nullable', 'date_format:H:i'],
+            'description' => ['nullable', 'string'],
+            'image_url' => ['nullable', 'url'],
         ]);
 
         $cinema = Cinema::create($validated);
@@ -73,6 +84,17 @@ class CinemaController extends Controller
                 'sometimes',
                 'string'
             ],
+            'address' => ['sometimes', 'nullable', 'string'],
+            'phone' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'email' => ['sometimes', 'nullable', 'email'],
+            'website' => ['sometimes', 'nullable', 'url'],
+            'status' => ['sometimes', 'string', Rule::in(['active', 'inactive'])],
+            'halls' => ['sometimes', 'integer', 'min:0'],
+            'seats' => ['sometimes', 'integer', 'min:0'],
+            'opening_time' => ['sometimes', 'nullable', 'date_format:H:i'],
+            'closing_time' => ['sometimes', 'nullable', 'date_format:H:i'],
+            'description' => ['sometimes', 'nullable', 'string'],
+            'image_url' => ['sometimes', 'nullable', 'url'],
         ]);
 
         $cinema->update($validated);

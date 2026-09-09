@@ -15,6 +15,19 @@ class CategoryController extends Controller
         return response()->json($categories);
     }
 
+    public function show(int $id): JsonResponse
+    {
+        $category = Category::find($id);
+
+        if (!$category) {
+            return response()->json([
+                'message' => 'Category not found'
+            ], 404);
+        }
+
+        return response()->json($category);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([

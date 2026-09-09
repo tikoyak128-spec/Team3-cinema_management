@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\VerificationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\CategoryController;
@@ -13,13 +14,29 @@ use Illuminate\Support\Facades\Route;
 
 // Authentication (public)
 Route::post('/register', [AuthController::class, 'register']);
+Route::post('/verify-otp', [AuthController::class, 'verifyOtp'])
+    ->middleware('throttle:10,1')
+    ->name('registration.verify');
+Route::post('/resend-otp', [AuthController::class, 'resendOtp'])
+    ->middleware('throttle:6,1')
+    ->name('registration.resend');
 Route::post('/login', [AuthController::class, 'login']);
 
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+
+    // Email verification (resend is authenticated)
+    Route::post('/email/resend', [VerificationController::class, 'resend'])
+        ->middleware('throttle:6,1')
+        ->name('verification.send');
 });
+
+// Email verification (signed URL from email; no token required)
+Route::get('/email/verify/{id}/{hash}', [VerificationController::class, 'verify'])
+    ->middleware('signed')
+    ->name('verification.verify');
 
 Route::apiResource('movies', MovieController::class);
 Route::apiResource('categories', CategoryController::class);

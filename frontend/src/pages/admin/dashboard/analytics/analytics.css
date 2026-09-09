@@ -1,0 +1,311 @@
+/* ===== ANALYTICS / REPORTS STYLES (KHMER CINEMA) ===== */
+
+/* ===== PERIOD TABS ===== */
+.an-periodtabs {
+  display: inline-flex;
+  background: #111111;
+  border: 1px solid #1f1f1f;
+  border-radius: 12px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.an-periodtab {
+  border: none;
+  background: transparent;
+  color: #a0a0a0;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.an-periodtab:hover { color: #f5f5f5; }
+
+.an-periodtab.active {
+  background: #e50914;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(229, 9, 20, 0.35);
+}
+
+/* ===== KPI STAT CARDS ===== */
+.an-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+}
+
+.an-stat {
+  background: #111111;
+  border: 1px solid #1f1f1f;
+  border-radius: 16px;
+  padding: 18px 20px;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.an-stat:hover {
+  transform: translateY(-3px);
+  border-color: rgba(229, 9, 20, 0.4);
+}
+
+.an-stat-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.an-stat-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.an-stat-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 999px;
+}
+
+.an-stat-delta.up { color: #22c55e; background: rgba(34, 197, 94, 0.12); }
+.an-stat-delta.down { color: #ef4444; background: rgba(239, 68, 68, 0.12); }
+
+.an-stat-value {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.an-stat-label {
+  font-size: 13px;
+  color: #a0a0a0;
+  margin-top: 4px;
+}
+
+.an-stat-sub {
+  font-size: 12px;
+  color: #7a7a7a;
+  margin-top: 6px;
+}
+
+.an-grid-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+/* ===== GRID LAYOUT ===== */
+.an-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 18px;
+}
+
+.an-grid.equal { grid-template-columns: 1fr 1fr; }
+
+@media (max-width: 1100px) {
+  .an-grid,
+  .an-grid.equal { grid-template-columns: 1fr; }
+}
+
+/* ===== CARDS ===== */
+.an-card {
+  background: #111111;
+  border: 1px solid #1f1f1f;
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.an-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.an-card-head h3 { font-size: 16px; font-weight: 800; }
+.an-card-meta { font-size: 12px; color: #a0a0a0; display: inline-flex; align-items: center; gap: 6px; }
+.an-card-meta .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* ===== CHARTS ===== */
+.an-chart-wrap { width: 100%; }
+
+.an-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.an-chart-axis { fill: #7a7a7a; font-size: 11px; }
+
+/* ===== DONUT ===== */
+.an-donut-flex {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.an-donut-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.an-donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.an-donut-value { font-size: 22px; font-weight: 800; }
+.an-donut-label { font-size: 12px; color: #a0a0a0; }
+
+.an-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-width: 150px;
+}
+
+.an-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.an-legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.an-legend-name { color: #e0e0e0; flex: 1; }
+.an-legend-pct { color: #a0a0a0; font-size: 12px; }
+.an-legend-value { font-weight: 700; }
+
+/* ===== HORIZONTAL BARS ===== */
+.an-bars { display: flex; flex-direction: column; gap: 16px; }
+
+.an-bar-row { display: flex; align-items: center; gap: 12px; }
+
+.an-bar-label {
+  width: 148px;
+  font-size: 13px;
+  color: #e0e0e0;
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.an-bar-track {
+  flex: 1;
+  height: 10px;
+  background: #1c1c1c;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.an-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.an-bar-value {
+  width: 56px;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 700;
+  color: #a0a0a0;
+}
+
+/* ===== TOP FILMS ===== */
+.an-films { display: flex; flex-direction: column; gap: 14px; }
+
+.an-film-row { display: flex; align-items: center; gap: 12px; }
+
+.an-film-rank {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: rgba(229, 9, 20, 0.12);
+  color: #e50914;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.an-film-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.an-film-title {
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.an-film-genre { font-size: 12px; color: #a0a0a0; margin-top: 2px; }
+
+.an-film-bars {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.an-film-value {
+  width: 42px;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 700;
+  color: #a0a0a0;
+}
+
+.an-film-bar {
+  width: 96px;
+  height: 7px;
+  background: #1c1c1c;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.an-film-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+}
+
+/* ===== TABLES ===== */
+.an-table-card {
+  background: #111111;
+  border: 1px solid #1f1f1f;
+  border-radius: 16px;
+  overflow: hidden;
+}
