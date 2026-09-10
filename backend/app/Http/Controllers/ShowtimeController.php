@@ -36,10 +36,10 @@ class ShowtimeController extends Controller
                 'integer',
                 'exists:movies,id'
             ],
-            'room_id' => [
+            'cinema_room_id' => [
                 'required',
                 'integer',
-                'exists:rooms,id'
+                'exists:cinema_rooms,id'
             ],
             'start_time' => [
                 'required',
@@ -54,6 +54,11 @@ class ShowtimeController extends Controller
                 'required',
                 'numeric',
                 'min:0'
+            ],
+            'status' => [
+                'nullable',
+                'string',
+                'max:255'
             ],
         ]);
 
@@ -81,10 +86,10 @@ class ShowtimeController extends Controller
                 'integer',
                 'exists:movies,id'
             ],
-            'room_id' => [
+            'cinema_room_id' => [
                 'sometimes',
                 'integer',
-                'exists:rooms,id'
+                'exists:cinema_rooms,id'
             ],
             'start_time' => [
                 'sometimes',
@@ -99,6 +104,11 @@ class ShowtimeController extends Controller
                 'sometimes',
                 'numeric',
                 'min:0'
+            ],
+            'status' => [
+                'nullable',
+                'string',
+                'max:255'
             ],
         ]);
 

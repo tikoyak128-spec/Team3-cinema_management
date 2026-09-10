@@ -9,10 +9,11 @@ class Showtime extends Model
 {
     protected $fillable = [
         'movie_id',
-        'room_id',
+        'cinema_room_id',
         'start_time',
         'end_time',
         'price',
+        'status',
     ];
 
     public function movie(): BelongsTo
@@ -22,6 +23,6 @@ class Showtime extends Model
 
     public function room(): BelongsTo
     {
-        return $this->belongsTo(Room::class);
+        return $this->belongsTo(Room::class, 'cinema_room_id');
     }
 }

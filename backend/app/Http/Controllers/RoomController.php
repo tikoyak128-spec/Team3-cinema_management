@@ -41,9 +41,9 @@ class RoomController extends Controller
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('rooms', 'name')
+                Rule::unique('cinema_rooms', 'name')
             ],
-            'total_seats' => [
+            'capacity' => [
                 'required',
                 'integer',
                 'min:1'
@@ -78,9 +78,9 @@ class RoomController extends Controller
                 'sometimes',
                 'string',
                 'max:255',
-                Rule::unique('rooms', 'name')->ignore($room->id)
+                Rule::unique('cinema_rooms', 'name')->ignore($room->id)
             ],
-            'total_seats' => [
+            'capacity' => [
                 'sometimes',
                 'integer',
                 'min:1'

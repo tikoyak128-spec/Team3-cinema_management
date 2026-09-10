@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 import {
   ChartColumn,
   CircleCheck,
@@ -7,6 +8,8 @@ import {
   LogOut,
   Search,
   Shield,
+  Sun,
+  Moon,
   Ticket,
   Users,
 } from "lucide-react";
@@ -33,6 +36,8 @@ export default function StaffLayout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const dark = theme === "dark";
 
   const handleLogout = () => {
     logout();
@@ -44,237 +49,89 @@ export default function StaffLayout({ children }) {
     (path !== "/staff/dashboard" && location.pathname.startsWith(path));
 
   return (
-    <div style={styles.container}>
-      <style>{css}</style>
-
+    <div className="flex min-h-screen bg-[var(--app-page)] text-[var(--app-ink)]">
       {/* Sidebar */}
-      <aside style={styles.sidebar}>
-        <div style={styles.brandLogo} onClick={() => navigate("/staff/dashboard")}>
-          <span style={styles.logoIcon}><Clapperboard size={26} /></span>
-          <span style={styles.logoPrimary}>KHMER <span style={{ color: "#e50914" }}>CINEMA</span></span>
+      <aside className="flex w-[260px] max-md:w-[220px] flex-col border-r border-[var(--app-edge)] bg-[var(--app-panel)] p-[24px_16px]">
+        <div className="mb-6 flex cursor-pointer items-center gap-2.5 border-b border-[var(--app-edge)] pb-5" onClick={() => navigate("/staff/dashboard")}>
+          <span className="text-brand"><Clapperboard size={26} /></span>
+          <span className="text-[18px] font-extrabold tracking-[2px] text-[var(--app-ink)]">
+            KHMER <span className="text-brand">CINEMA</span>
+          </span>
         </div>
 
-        <div style={styles.staffBadge}>
-          <span style={styles.badgeIcon}><Shield size={16} /></span>
-          <span style={styles.badgeText}>Staff Panel</span>
+        <div className="mb-5 flex items-center gap-2 rounded-xl border border-brand/30 bg-brand/10 px-3.5 py-2.5">
+          <span className="text-brand"><Shield size={16} /></span>
+          <span className="text-[13px] font-bold text-brand">Staff Panel</span>
         </div>
 
-        <nav style={styles.nav}>
+        <nav className="flex flex-1 flex-col gap-3 overflow-y-auto">
           {staffSections.map((section) => (
-            <div key={section.label} style={styles.navSection}>
-              <div style={styles.sectionLabel}>{section.label}</div>
+            <div key={section.label} className="flex flex-col gap-1">
+              <div className="px-3 pb-1.5 pt-1 text-[11px] font-bold uppercase tracking-[1.2px] text-[var(--app-mute)]">
+                {section.label}
+              </div>
               {section.items.map((item) => (
                 <button
                   key={item.path}
                   onClick={() => navigate(item.path)}
-                  style={{
-                    ...styles.navItem,
-                    ...(isActive(item.path) ? styles.navItemActive : {}),
-                  }}
+                  className={`relative flex w-full cursor-pointer items-center gap-3 rounded-xl px-3.5 py-[11px] text-left text-[14px] font-semibold transition-all duration-200 ${
+                    isActive(item.path)
+                      ? "bg-brand text-white shadow-[0_4px_14px_rgba(229,9,20,0.35)]"
+                      : "text-[var(--app-mute)] hover:bg-[var(--app-fill)] hover:text-[var(--app-ink)]"
+                  }`}
                 >
-                  <span style={styles.navIcon}><item.icon size={18} /></span>
-                  <span style={styles.navText}>{item.name}</span>
-                  {item.badge && <span style={styles.navBadge}>{item.badge}</span>}
+                  <span className="flex w-[22px] shrink-0 justify-center text-[18px]"><item.icon size={18} /></span>
+                  <span className="flex-1">{item.name}</span>
+                  {item.badge && (
+                    <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-black/10 px-1.5 text-[11px] font-bold text-[var(--app-ink2)] dark:bg-white/20 dark:text-white">
+                      {item.badge}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
           ))}
         </nav>
 
-        <div style={styles.staffCard}>
-          <span style={styles.staffAvatar}><Shield size={18} /></span>
-          <div style={styles.staffInfo}>
-            <span style={styles.staffName}>{user?.name || "Staff Member"}</span>
-            <span style={styles.staffRole}>Ticket Officer</span>
+        <div className="mb-3 flex items-center gap-3 rounded-xl border border-[var(--app-edge)] bg-[var(--app-panel2)] px-3 py-2.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand"><Shield size={18} /></span>
+          <div className="flex flex-col overflow-hidden">
+            <span className="truncate text-[13px] font-semibold text-[var(--app-ink)]">{user?.name || "Staff Member"}</span>
+            <span className="text-[11px] text-[var(--app-mute)]">Ticket Officer</span>
           </div>
         </div>
 
-        <button onClick={handleLogout} style={styles.logoutBtn}>
+        <button
+          onClick={handleLogout}
+          className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-[var(--app-edge2)] py-3 text-[13px] font-semibold text-[var(--app-mute)] transition-all duration-200 hover:border-brand/30 hover:bg-brand/10 hover:text-brand"
+        >
           <LogOut size={16} /> Logout
         </button>
       </aside>
 
       {/* Main Content */}
-      <main style={styles.main}>
-        <header style={styles.header}>
-          <h2 style={styles.headerTitle}>Staff Dashboard</h2>
-          <span style={styles.headerUser}><Shield size={13} /> {user?.name || "Staff Member"}</span>
+      <main className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-[var(--app-edge)] bg-[var(--app-header)] px-[30px] py-4 backdrop-blur-[12px]">
+          <h2 className="text-[20px] font-extrabold">Staff Dashboard</h2>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={toggleTheme}
+              title={dark ? "Switch to light mode" : "Switch to dark mode"}
+              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-[var(--app-edge2)] bg-[var(--app-fill)] text-[var(--app-ink2)] transition-all duration-200 hover:border-brand/50 hover:text-brand"
+            >
+              {dark ? <Sun size={17} /> : <Moon size={17} />}
+            </button>
+            <span className="rounded-full border border-brand/30 bg-brand/10 px-3.5 py-1.5 text-[13px] font-bold text-brand">
+              <Shield size={13} className="mr-1 inline" /> {user?.name || "Staff Member"}
+            </span>
+          </div>
         </header>
-        <div style={styles.content}>
+        <div className="flex-1 overflow-y-auto p-[30px]">
           {children || (
-            <h1 style={{ color: "#ffffff", fontSize: "24px" }}>Staff Dashboard</h1>
+            <h1 className="text-[24px] text-[var(--app-ink)]">Staff Dashboard</h1>
           )}
         </div>
       </main>
     </div>
   );
 }
-
-const styles = {
-  container: {
-    display: "flex",
-    minHeight: "100vh",
-    backgroundColor: "#050505",
-    color: "#ffffff",
-    fontFamily: "'Mulish', 'Kantumruy Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-  },
-  sidebar: {
-    width: "260px",
-    backgroundColor: "#111111",
-    borderRight: "1px solid #1f1f1f",
-    display: "flex",
-    flexDirection: "column",
-    padding: "24px 16px",
-  },
-  brandLogo: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    marginBottom: "24px",
-    
-    paddingBottom: "20px",
-    borderBottom: "1px solid #1f1f1f",
-    cursor: "pointer",
-  },
-  logoIcon: { fontSize: "26px" },
-  logoPrimary: {
-    display: "block",
-    fontSize: "18px",
-    fontWeight: "800",
-    letterSpacing: "2px",
-    color: "#ffffff",
-  },
-  staffBadge: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    padding: "10px 14px",
-    backgroundColor: "rgba(229, 9, 20, 0.1)",
-    border: "1px solid rgba(229, 9, 20, 0.3)",
-    borderRadius: "12px",
-    marginBottom: "20px",
-  },
-  badgeIcon: { fontSize: "16px" },
-  badgeText: { fontSize: "13px", fontWeight: "700", color: "#e50914" },
-  nav: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-    flex: 1,
-    overflowY: "auto",
-  },
-  navSection: { display: "flex", flexDirection: "column", gap: "4px" },
-  sectionLabel: {
-    fontSize: "11px",
-    textTransform: "uppercase",
-    letterSpacing: "1.2px",
-    color: "#8a8a8a",
-    fontWeight: "700",
-    padding: "4px 12px 6px",
-  },
-  navItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    background: "none",
-    border: "none",
-    color: "#a0a0a0",
-    padding: "11px 14px",
-    fontSize: "14px",
-    fontWeight: "600",
-    borderRadius: "12px",
-    cursor: "pointer",
-    textAlign: "left",
-    transition: "all 0.2s",
-    position: "relative",
-  },
-  navItemActive: {
-    backgroundColor: "#e50914",
-    color: "#ffffff",
-    boxShadow: "0 4px 14px rgba(229, 9, 20, 0.35)",
-  },
-  navIcon: { fontSize: "18px", width: "22px", textAlign: "center", flexShrink: 0 },
-  navText: { flex: 1 },
-  navBadge: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    minWidth: "20px",
-    height: "20px",
-    padding: "0 6px",
-    background: "#ffffff20",
-    color: "#ffffff",
-    fontSize: "11px",
-    fontWeight: "700",
-    borderRadius: "20px",
-  },
-  staffCard: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    padding: "10px 12px",
-    background: "#161616",
-    border: "1px solid #262626",
-    borderRadius: "12px",
-    marginBottom: "12px",
-  },
-  staffAvatar: {
-    width: "36px",
-    height: "36px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background: "rgba(229, 9, 20, 0.12)",
-    borderRadius: "50%",
-    flexShrink: 0,
-  },
-  staffInfo: { display: "flex", flexDirection: "column", overflow: "hidden" },
-  staffName: { fontSize: "13px", fontWeight: "600", color: "#f5f5f5" },
-  staffRole: { fontSize: "11px", color: "#a0a0a0" },
-  logoutBtn: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "8px",
-    background: "none",
-    border: "1px solid #2a2a2a",
-    color: "#a0a0a0",
-    padding: "12px",
-    borderRadius: "12px",
-    fontSize: "13px",
-    fontWeight: "600",
-    cursor: "pointer",
-    transition: "all 0.2s",
-  },
-  main: { flex: 1, display: "flex", flexDirection: "column", minWidth: 0 },
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "16px 30px",
-    backgroundColor: "rgba(5, 5, 5, 0.85)",
-    backdropFilter: "blur(12px)",
-    borderBottom: "1px solid #1f1f1f",
-    position: "sticky",
-    top: 0,
-    zIndex: 10,
-  },
-  headerTitle: { fontSize: "20px", fontWeight: "800" },
-  headerUser: {
-    fontSize: "13px",
-    color: "#e50914",
-    background: "rgba(229, 9, 20, 0.1)",
-    border: "1px solid rgba(229, 9, 20, 0.3)",
-    padding: "6px 14px",
-    borderRadius: "20px",
-    fontWeight: "700",
-  },
-  content: { flex: 1, padding: "30px", overflowY: "auto" },
-};
-
-const css = `
-  .staff-layout-logoutbutton { cursor: pointer; }
-  @media (max-width: 768px) {
-    .sidebar { width: 220px; }
-  }
-`;

@@ -1,116 +1,165 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Clapperboard, Pencil, Search, Tag, Trash2 } from "lucide-react";
-import "../admin.css";
-
-const initialMovies = [
-  { id: 1, title: "The Last Emperor", genre: "Drama", rating: "PG-13", duration: "2h 18m", category: "Drama", status: "Now Showing", poster: Clapperboard },
-  { id: 2, title: "City of Shadows", genre: "Action", rating: "R", duration: "1h 52m", category: "Action", status: "Now Showing", poster: Clapperboard },
-  { id: 3, title: "Golden Dawn", genre: "Romance", rating: "PG", duration: "2h 05m", category: "Romance", status: "Now Showing", poster: Clapperboard },
-  { id: 4, title: "Age of Wonders", genre: "Fantasy", rating: "PG-13", duration: "2h 20m", category: "Fantasy", status: "Coming Soon", poster: Clapperboard },
-  { id: 5, title: "The Far Horizon", genre: "Sci-Fi", rating: "PG-13", duration: "2h 12m", category: "Sci-Fi", status: "Coming Soon", poster: Clapperboard },
-];
+import { Clapperboard, Pencil, Plus, Search, Tag, Trash2 } from "lucide-react";
+import api from "../../../../api/client";
+import { usePrefs } from "../../../../context/PrefsContext";
 
 export default function MovieList() {
   const navigate = useNavigate();
+  const { t } = usePrefs();
+  const [movies, setMovies] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [confirmId, setConfirmId] = useState(null);
 
-  const filtered = initialMovies.filter((m) => {
-    const matchSearch =
-      m.title.toLowerCase().includes(search.toLowerCase()) ||
-      m.genre.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === "all" || m.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const { data } = await api.get("/movies");
+        if (!cancelled) setMovies(data);
+      } catch (err) {
+        if (!cancelled) setError(err?.response?.data?.message || t("adminMovieList.failedLoad"));
+      }
+      if (!cancelled) setLoading(false);
+    };
+    load();
+    return () => { cancelled = true; };
+  }, []);
 
-  const statusBadge = (s) =>
-    s === "Now Showing" ? "kc-badge-green" : "kc-badge-yellow";
+  const handleDelete = async (id) => {
+    try {
+      await api.delete(`/movies/${id}`);
+      setMovies((prev) => prev.filter((m) => m.id !== id));
+      setConfirmId(null);
+    } catch (err) {
+      setError(err?.response?.data?.message || t("adminMovieList.failedDelete"));
+    }
+  };
+
+  const filtered = movies.filter((m) =>
+    m.title.toLowerCase().includes(search.toLowerCase()) ||
+    (m.category?.name || "").toLowerCase().includes(search.toLowerCase())
+  );
+
+  const formatDuration = (min) => {
+    if (!min) return "";
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    return h > 0 ? `${h}${t("adminMovieList.hourShort")} ${m}${t("adminMovieList.minuteShort")}` : `${m}${t("adminMovieList.minuteShort")}`;
+  };
+
+  const deleteButtons = (m) => (
+    <div className="flex gap-2 items-center">
+      <button className="bg-[var(--app-panel2)] border border-[var(--app-edge2)] text-[var(--app-ink2)] w-[34px] h-[34px] rounded-[10px] cursor-pointer flex items-center justify-center text-[15px] transition-all duration-200 hover:bg-[var(--app-fill)] hover:text-[var(--app-ink)] [&.edit:hover]:bg-[rgba(229,9,20,0.15)] [&.edit:hover]:text-[#e50914] [&.edit:hover]:border-[rgba(229,9,20,0.3)] [&.delete:hover]:bg-[rgba(229,9,20,0.15)] [&.delete:hover]:text-[#e50914] [&.delete:hover]:border-[rgba(229,9,20,0.3)]" title={t("common.edit")} onClick={() => navigate(`/admin/movies/${m.id}/edit`)}><Pencil size={16} /></button>
+      {confirmId === m.id ? (
+        <div className="flex gap-2 items-center">
+          <button className="inline-flex items-center gap-2 border-none cursor-pointer font-inherit py-2 px-3.5 text-[13px] font-bold rounded-[10px] transition-all duration-200 bg-[rgba(229,9,20,0.12)] text-[#e50914] border border-[rgba(229,9,20,0.35)] hover:bg-[rgba(229,9,20,0.2)]" onClick={() => handleDelete(m.id)}>{t("common.confirm")}</button>
+          <button className="inline-flex items-center gap-2 border-none cursor-pointer font-inherit py-2 px-3.5 text-[13px] font-bold rounded-[10px] transition-all duration-200 bg-transparent text-[var(--app-ink2)] border border-[var(--app-edge2)] hover:bg-[var(--app-fill)]" onClick={() => setConfirmId(null)}>{t("common.cancel")}</button>
+        </div>
+      ) : (
+        <button className="bg-[var(--app-panel2)] border border-[var(--app-edge2)] text-[var(--app-ink2)] w-[34px] h-[34px] rounded-[10px] cursor-pointer flex items-center justify-center text-[15px] transition-all duration-200 hover:bg-[var(--app-fill)] hover:text-[var(--app-ink)] [&.delete:hover]:bg-[rgba(229,9,20,0.15)] [&.delete:hover]:text-[#e50914] [&.delete:hover]:border-[rgba(229,9,20,0.3)]" title={t("common.delete")} onClick={() => setConfirmId(m.id)}><Trash2 size={16} /></button>
+      )}
+    </div>
+  );
 
   return (
-    <div className="kc-page">
-      <div className="kc-head">
+    <div className="flex flex-col gap-6 text-[var(--app-ink)] [&_*]:box-border">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1>Movies</h1>
-          <p className="kc-subtitle">Manage your movie catalog, showtimes and availability.</p>
+          <h1 className="text-[22px] sm:text-[26px] font-extrabold tracking-wide">{t("admin.movies")}</h1>
+          <p className="text-[14px] text-[var(--app-mute)] mt-1">{t("adminMovieList.subtitle")}</p>
         </div>
-        <div className="kc-actions">
-          <button className="kc-btn kc-btn-primary" onClick={() => navigate("/admin/movies/create")}>
-            ＋ Add Movie
-          </button>
-        </div>
+        <button className="inline-flex items-center justify-center gap-2 border-none cursor-pointer font-inherit py-[11px] px-5 text-[14px] font-bold rounded-xl transition-all duration-200 bg-[#e50914] text-white shadow-[0_4px_14px_rgba(229,9,20,0.35)] hover:bg-[#f40612] hover:-translate-y-px w-full sm:w-auto" onClick={() => navigate("/admin/movies/create")}>
+          <Plus size={16} /> {t("admin.addMovie")}
+        </button>
       </div>
 
-      <div className="kc-toolbar">
-        <div className="kc-search">
-          <span><Search size={16} /></span>
-          <input
-            placeholder="Search by title or genre..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+      {error && (
+        <div className="bg-[rgba(229,9,20,0.12)] border border-[rgba(229,9,20,0.4)] text-[#ff6b6b] text-[13px] p-[10px_14px] rounded-[10px] flex justify-between items-center">
+          {error}
+          <button onClick={() => setError("")} className="bg-transparent border-none text-[#ff6b6b] text-[18px] cursor-pointer leading-none">×</button>
         </div>
-        <div className="kc-filters">
-          <select className="kc-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="all">All Status</option>
-            <option value="Now Showing">Now Showing</option>
-            <option value="Coming Soon">Coming Soon</option>
-          </select>
-        </div>
+      )}
+
+      <div className="flex items-center gap-2.5 bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-xl py-2.5 px-3.5 text-[var(--app-mute)] w-full sm:max-w-xs">
+        <span className="shrink-0"><Search size={16} /></span>
+        <input className="bg-transparent border-none outline-none text-[var(--app-ink)] font-inherit text-[14px] w-full" placeholder={t("adminMovieList.searchPlaceholder")} value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
-      <div className="kc-card">
-        <div className="kc-table-wrap">
-          <table className="kc-table">
-            <thead>
-              <tr>
-                <th>Movie</th>
-                <th>Genre</th>
-                <th>Rating</th>
-                <th>Duration</th>
-                <th>Category</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+      <div className="bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-2xl overflow-hidden">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-10 px-5 text-center text-[var(--app-mute)]">
+            <p>{t("adminMovieList.loading")}</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-[60px] px-5 text-center text-[var(--app-mute)]">
+            <div className="text-[44px] mb-3"><Clapperboard size={32} /></div>
+            <p>{t("adminMovieList.noData")}</p>
+          </div>
+        ) : (
+          <>
+            {/* Mobile / tablet card list */}
+            <div className="md:hidden flex flex-col gap-3 p-4 sm:p-5">
               {filtered.map((m) => (
-                <tr key={m.id}>
-                  <td>
-                    <div className="kc-cell-user">
-                      <div className="kc-thumb"><m.poster size={18} /></div>
-                      <div>
-                        <div className="kc-cell-main">{m.title}</div>
-                        <div className="kc-cell-sub">ID: MOV-{String(m.id).padStart(3, "0")}</div>
-                      </div>
+                <div key={m.id} className="bg-[var(--app-panel2)] border border-[var(--app-edge2)] rounded-2xl p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-[48px] h-[64px] rounded-lg bg-[var(--app-panel)] overflow-hidden shrink-0 flex items-center justify-center text-[var(--app-mute)]">
+                      {m.poster ? <img src={m.poster} alt={m.title} className="w-full h-full object-cover" /> : <Clapperboard size={18} />}
                     </div>
-                  </td>
-                  <td>{m.genre}</td>
-                  <td><span className="kc-badge kc-badge-gray">{m.rating}</span></td>
-                  <td>{m.duration}</td>
-                  <td><span className="kc-chip"><Tag size={13} /> {m.category}</span></td>
-                  <td><span className={`kc-badge ${statusBadge(m.status)}`}>{m.status}</span></td>
-                  <td>
-                    <div className="kc-actions-cell">
-                      <button className="kc-icon-btn edit" title="Edit" onClick={() => navigate(`/admin/movies/${m.id}/edit`)}><Pencil size={16} /></button>
-                      <button className="kc-icon-btn delete" title="Delete"><Trash2 size={16} /></button>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-bold text-[var(--app-ink)] leading-snug">{m.title}</div>
+                      <div className="text-[12px] text-[var(--app-mute)] mt-0.5">MOV-{String(m.id).padStart(3, "0")}</div>
                     </div>
-                  </td>
-                </tr>
+                    <div className="shrink-0">{deleteButtons(m)}</div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-[var(--app-edge)] flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px]">
+                    <span className="inline-flex items-center gap-1.5 bg-[var(--app-fill)] border border-[var(--app-edge2)] text-[var(--app-ink2)] py-1 px-2.5 rounded-[8px] text-[12px] font-semibold"><Tag size={12} /> {m.category?.name || "N/A"}</span>
+                    <span className="text-[var(--app-mute)]">{formatDuration(m.duration)}</span>
+                    <span className="text-[var(--app-mute)]">{m.release_date || "N/A"}</span>
+                  </div>
+                </div>
               ))}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={7}>
-                    <div className="kc-empty">
-                      <div className="kc-empty-icon"><Clapperboard size={32} /></div>
-                      <p>No movies found.</p>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full border-collapse text-[14px] [&>thead_th]:text-left [&>thead_th]:py-[14px] [&>thead_th]:px-[18px] [&>thead_th]:text-[var(--app-mute)] [&>thead_th]:text-[12px] [&>thead_th]:font-bold [&>thead_th]:uppercase [&>thead_th]:tracking-widest [&>thead_th]:border-b [&>thead_th]:border-[var(--app-edge)] [&>thead_th]:bg-[var(--app-fill)] [&>thead_th]:whitespace-nowrap [&>th]:sticky [&>th]:top-[70px] [&>th]:z-5 [&>th]:bg-[var(--app-panel)] [&>tbody_td]:py-[14px] [&>tbody_td]:px-[18px] [&>tbody_td]:border-b [&>tbody_td]:border-[var(--app-edge)] [&>tbody_td]:text-[var(--app-ink2)] [&>tbody_td]:align-middle [&>tbody>tr]:transition-colors [&>tbody>tr]:duration-150 [&>tbody>tr:hover]:bg-[var(--app-fill)] [&>tbody>tr:last-child>td]:border-b-0">
+                <thead>
+                  <tr>
+                    <th>{t("adminMovieList.movie")}</th>
+                    <th>{t("adminMovieList.category")}</th>
+                    <th>{t("adminMovieList.duration")}</th>
+                    <th>{t("adminMovieList.releaseDate")}</th>
+                    <th>{t("common.actions")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((m) => (
+                    <tr key={m.id}>
+                      <td>
+                        <div className="flex items-center gap-3">
+                          <div className="w-[46px] h-[62px] rounded-lg object-cover bg-[var(--app-panel2)] flex items-center justify-center text-[var(--app-mute)] text-[20px] overflow-hidden shrink-0">
+                            {m.poster ? <img src={m.poster} alt={m.title} className="w-full h-full object-cover" /> : <Clapperboard size={18} />}
+                          </div>
+                          <div>
+                            <div className="font-bold text-[var(--app-ink)]">{m.title}</div>
+                            <div className="text-[12px] text-[var(--app-mute)]">ID: MOV-{String(m.id).padStart(3, "0")}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td><span className="inline-flex items-center gap-1.5 bg-[var(--app-panel2)] border border-[var(--app-edge2)] text-[var(--app-ink2)] py-1.5 px-3 rounded-[10px] text-[13px] font-semibold"><Tag size={13} /> {m.category?.name || "N/A"}</span></td>
+                      <td>{formatDuration(m.duration)}</td>
+                      <td>{m.release_date || "N/A"}</td>
+                      <td>{deleteButtons(m)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

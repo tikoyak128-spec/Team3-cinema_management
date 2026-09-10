@@ -8,11 +8,16 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
+import { usePrefs } from "../../../../context/PrefsContext";
 import { AreaChart, DonutChart } from "./charts";
-import "../admin.css";
-import "./analytics.css";
 
 const periods = ["This Week", "This Month", "This Year"];
+
+const periodKey = {
+  "This Week": "adminAnalytics.periodWeek",
+  "This Month": "adminAnalytics.periodMonth",
+  "This Year": "adminAnalytics.periodYear",
+};
 
 const revenueSeries = {
   "This Week": {
@@ -30,10 +35,10 @@ const revenueSeries = {
 };
 
 const kpis = [
-  { label: "Total Revenue", value: "$48,290", delta: "+12.4%", up: true, icon: Wallet, color: "#22c55e" },
-  { label: "Tickets Sold", value: "3,842", delta: "+8.1%", up: true, icon: Ticket, color: "#60a5fa" },
-  { label: "Avg Occupancy", value: "72%", delta: "+3.2%", up: true, icon: Users, color: "#eab308" },
-  { label: "Avg Ticket Price", value: "$12.57", delta: "-1.8%", up: false, icon: Clapperboard, color: "#e50914" },
+  { labelKey: "totalRevenue", value: "$48,290", delta: "+12.4%", up: true, icon: Wallet, color: "#22c55e" },
+  { labelKey: "ticketsSold", value: "3,842", delta: "+8.1%", up: true, icon: Ticket, color: "#60a5fa" },
+  { labelKey: "avgOccupancy", value: "72%", delta: "+3.2%", up: true, icon: Users, color: "#eab308" },
+  { labelKey: "avgTicketPrice", value: "$12.57", delta: "-1.8%", up: false, icon: Clapperboard, color: "#e50914" },
 ];
 
 const genres = [
@@ -68,87 +73,88 @@ const dailyBookings = [
 ];
 
 export default function Analytics() {
+  const { t } = usePrefs();
   const [period, setPeriod] = useState("This Week");
   const series = revenueSeries[period];
   const total = 100;
   const maxBar = Math.max(...cinemaBars.map((c) => c.value));
 
   return (
-    <div className="kc-page">
-      <div className="kc-head">
+    <div className="flex flex-col gap-6 text-[var(--app-ink)] [&_*]:box-border">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1>Analytics</h1>
-          <p className="kc-subtitle">Performance insights across all cinemas.</p>
+          <h1 className="text-[26px] font-extrabold tracking-wide">{t("admin.analytics")}</h1>
+          <p className="text-[14px] text-[var(--app-mute)] mt-1">{t("adminAnalytics.subtitle")}</p>
         </div>
-        <div className="kc-actions">
-          <div className="an-periodtabs">
+        <div className="flex gap-2.5 items-center flex-wrap">
+          <div className="inline-flex bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-xl p-1 gap-1">
             {periods.map((p) => (
               <button
                 key={p}
-                className={`an-periodtab ${period === p ? "active" : ""}`}
+                className={`border-none bg-transparent text-[var(--app-mute)] font-inherit text-[13px] font-semibold py-2 px-3.5 rounded-[9px] cursor-pointer transition-all duration-200 hover:text-[var(--app-ink)] ${period === p ? "bg-[#e50914] text-white shadow-[0_4px_12px_rgba(229,9,20,0.35)]" : ""}`}
                 onClick={() => setPeriod(p)}
               >
-                {p}
+                {t(periodKey[p])}
               </button>
             ))}
           </div>
-          <button className="kc-btn kc-btn-primary">
-            <Download size={16} /> Export
+          <button className="inline-flex items-center gap-2 border-none cursor-pointer font-inherit py-[11px] px-5 text-[14px] font-bold rounded-xl transition-all duration-200 bg-[#e50914] text-white shadow-[0_4px_14px_rgba(229,9,20,0.35)] hover:bg-[#f40612] hover:-translate-y-px">
+            <Download size={16} /> {t("adminAnalytics.export")}
           </button>
         </div>
       </div>
 
-      <div className="an-stats">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-[18px]">
         {kpis.map((k) => {
           const Icon = k.icon;
           return (
-            <div className="an-stat" key={k.label}>
-              <div className="an-stat-top">
+            <div className="bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-2xl p-[18px_20px] transition-all duration-200 hover:-translate-y-[3px] hover:border-[rgba(229,9,20,0.4)]" key={k.labelKey}>
+              <div className="flex items-center justify-between mb-[14px]">
                 <span
-                  className="an-stat-icon"
-                  style={{ background: `${k.color}1f`, color: k.color }}
+                  className="w-[42px] h-[42px] rounded-xl flex items-center justify-center bg-[color-mix(in_srgb,var(--c)_12%,transparent)] text-[var(--c)]"
+                  style={{ "--c": k.color }}
                 >
                   <Icon size={20} />
                 </span>
-                <span className={`an-stat-delta ${k.up ? "up" : "down"}`}>
+                <span className={`inline-flex items-center gap-1 text-[12px] font-bold py-[5px] px-2.5 rounded-full ${k.up ? "text-[#22c55e] bg-[rgba(34,197,94,0.12)]" : "text-[#ef4444] bg-[rgba(239,68,68,0.12)]"}`}>
                   {k.up ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
                   {k.delta}
                 </span>
               </div>
-              <div className="an-stat-value">{k.value}</div>
-              <div className="an-stat-label">{k.label}</div>
+              <div className="text-[26px] font-extrabold tracking-wide">{k.value}</div>
+              <div className="text-[13px] text-[var(--app-mute)] mt-1">{t(`adminAnalytics.${k.labelKey}`)}</div>
             </div>
           );
         })}
       </div>
 
-      <div className="an-grid">
-        <div className="an-card">
-          <div className="an-card-head">
-            <h3>Revenue Overview</h3>
-            <span className="an-card-meta">
-              <span className="dot" style={{ background: "#e50914" }} />
-              {period} · USD
+      <div className="grid grid-cols-[2fr_1fr] gap-[18px] max-[1100px]:grid-cols-1">
+        <div className="bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-2xl p-5">
+          <div className="flex items-center justify-between gap-2.5 flex-wrap mb-[18px]">
+            <h3 className="text-[16px] font-extrabold">{t("adminAnalytics.revenueOverview")}</h3>
+            <span className="text-[12px] text-[var(--app-mute)] inline-flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#e50914]" />
+              {t(periodKey[period])} · USD
             </span>
           </div>
-          <div className="an-chart-wrap">
+          <div className="w-full">
             <AreaChart labels={series.labels} values={series.values} format={(v) => `$${v.toFixed(1)}k`} />
           </div>
         </div>
 
-        <div className="an-card">
-          <div className="an-card-head">
-            <h3>Genre Share</h3>
+        <div className="bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-2xl p-5">
+          <div className="flex items-center justify-between gap-2.5 flex-wrap mb-[18px]">
+            <h3 className="text-[16px] font-extrabold">{t("adminAnalytics.genreShare")}</h3>
           </div>
-          <div className="an-donut-flex">
-            <DonutChart data={genres} centerValue="1,240" centerLabel="Tickets" />
-            <div className="an-legend">
+          <div className="flex items-center gap-6 flex-wrap">
+            <DonutChart data={genres} centerValue="1,240" centerLabel={t("adminAnalytics.tickets")} />
+            <div className="flex flex-col gap-2.5 flex-1 min-w-[150px]">
               {genres.map((g) => (
-                <div className="an-legend-item" key={g.name}>
-                  <span className="an-legend-dot" style={{ background: g.color }} />
-                  <span className="an-legend-name">{g.name}</span>
-                  <span className="an-legend-pct">{Math.round((g.value / total) * 100)}%</span>
-                  <span className="an-legend-value">{g.value}</span>
+                <div className="flex items-center gap-2.5 text-[13px]" key={g.name}>
+                  <span className="w-3 h-3 rounded shrink-0 bg-[var(--c)]" style={{ "--c": g.color }} />
+                  <span className="text-[var(--app-ink2)] flex-1">{g.name}</span>
+                  <span className="text-[var(--app-mute)] text-[12px]">{Math.round((g.value / total) * 100)}%</span>
+                  <span className="font-bold">{g.value}</span>
                 </div>
               ))}
             </div>
@@ -156,51 +162,51 @@ export default function Analytics() {
         </div>
       </div>
 
-      <div className="an-grid equal">
-        <div className="an-card">
-          <div className="an-card-head">
-            <h3>Tickets by Cinema</h3>
-            <span className="an-card-meta">{period}</span>
+      <div className="grid grid-cols-2 gap-[18px] max-[1100px]:grid-cols-1">
+        <div className="bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-2xl p-5">
+          <div className="flex items-center justify-between gap-2.5 flex-wrap mb-[18px]">
+            <h3 className="text-[16px] font-extrabold">{t("adminAnalytics.ticketsByCinema")}</h3>
+            <span className="text-[12px] text-[var(--app-mute)] inline-flex items-center gap-1.5">{t(periodKey[period])}</span>
           </div>
-          <div className="an-bars">
+          <div className="flex flex-col gap-4">
             {cinemaBars.map((c) => (
-              <div className="an-bar-row" key={c.name}>
-                <span className="an-bar-label">{c.name}</span>
-                <div className="an-bar-track">
+              <div className="flex items-center gap-3" key={c.name}>
+                <span className="w-[148px] text-[13px] text-[var(--app-ink2)] shrink-0 whitespace-nowrap overflow-hidden text-ellipsis">{c.name}</span>
+                <div className="flex-1 h-[10px] bg-[var(--app-panel2)] rounded-full overflow-hidden">
                   <div
-                    className="an-bar-fill"
-                    style={{ width: `${(c.value / maxBar) * 100}%`, background: c.color }}
+                    className="h-full rounded-full transition-all duration-[400ms] ease-in-out w-[var(--w)] bg-[var(--c)]"
+                    style={{ "--w": `${(c.value / maxBar) * 100}%`, "--c": c.color }}
                   />
                 </div>
-                <span className="an-bar-value">{c.value.toLocaleString()}</span>
+                <span className="w-14 text-right text-[13px] font-bold text-[var(--app-mute)]">{c.value.toLocaleString()}</span>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="an-card">
-          <div className="an-card-head">
-            <h3>Top Films</h3>
-            <span className="an-card-meta">By revenue</span>
+        <div className="bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-2xl p-5">
+          <div className="flex items-center justify-between gap-2.5 flex-wrap mb-[18px]">
+            <h3 className="text-[16px] font-extrabold">{t("adminAnalytics.topFilms")}</h3>
+            <span className="text-[12px] text-[var(--app-mute)] inline-flex items-center gap-1.5">{t("adminAnalytics.byRevenue")}</span>
           </div>
-          <div className="an-films">
+          <div className="flex flex-col gap-[14px]">
             {topFilms.map((f) => (
-              <div className="an-film-row" key={f.title}>
-                <span className="an-film-rank">{f.rank}</span>
-                <div className="an-film-main">
-                  <div className="an-film-title">{f.title}</div>
-                  <div className="an-film-genre">
+              <div className="flex items-center gap-3" key={f.title}>
+                <span className="w-7 h-7 rounded-[9px] bg-[rgba(229,9,20,0.12)] text-[#e50914] text-[12px] font-extrabold flex items-center justify-center shrink-0">{f.rank}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[14px] font-bold whitespace-nowrap overflow-hidden text-ellipsis">{f.title}</div>
+                  <div className="text-[12px] text-[var(--app-mute)] mt-[2px]">
                     {f.genre} · {f.revenue}
                   </div>
                 </div>
-                <div className="an-film-bars">
-                  <span className="an-film-bar">
+                <div className="flex items-center gap-2.5 shrink-0">
+                  <span className="w-24 h-[7px] bg-[var(--app-panel2)] rounded-full overflow-hidden">
                     <span
-                      className="an-film-bar-fill"
-                      style={{ width: `${f.occ}%`, background: f.color, display: "block" }}
+                      className="h-full rounded-full block w-[var(--w)] bg-[var(--c)]"
+                      style={{ "--w": `${f.occ}%`, "--c": f.color }}
                     />
                   </span>
-                  <span className="an-film-value">{f.occ}%</span>
+                  <span className="w-[42px] text-right text-[12px] font-bold text-[var(--app-mute)]">{f.occ}%</span>
                 </div>
               </div>
             ))}
@@ -208,17 +214,17 @@ export default function Analytics() {
         </div>
       </div>
 
-      <div className="an-table-card">
-        <div className="kc-table-wrap">
-          <table className="kc-table">
+      <div className="bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-2xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-[14px] [&>thead_th]:text-left [&>thead_th]:py-[14px] [&>thead_th]:px-[18px] [&>thead_th]:text-[var(--app-mute)] [&>thead_th]:text-[12px] [&>thead_th]:font-bold [&>thead_th]:uppercase [&>thead_th]:tracking-widest [&>thead_th]:border-b [&>thead_th]:border-[var(--app-edge)] [&>thead_th]:bg-[var(--app-fill)] [&>thead_th]:whitespace-nowrap [&>th]:sticky [&>th]:top-[70px] [&>th]:z-5 [&>th]:bg-[var(--app-panel)] [&>tbody_td]:py-[14px] [&>tbody_td]:px-[18px] [&>tbody_td]:border-b [&>tbody_td]:border-[var(--app-edge)] [&>tbody_td]:text-[var(--app-ink2)] [&>tbody_td]:align-middle [&>tbody>tr]:transition-colors [&>tbody>tr]:duration-150 [&>tbody>tr:hover]:bg-[var(--app-fill)] [&>tbody>tr:last-child>td]:border-b-0">
             <thead>
               <tr>
-                <th>Date</th>
-                <th>Bookings</th>
-                <th>Tickets</th>
-                <th>Occupancy</th>
-                <th>Revenue</th>
-                <th>Status</th>
+                <th>{t("adminAnalytics.date")}</th>
+                <th>{t("adminAnalytics.bookings")}</th>
+                <th>{t("adminAnalytics.tickets")}</th>
+                <th>{t("adminAnalytics.occupancy")}</th>
+                <th>{t("adminAnalytics.revenue")}</th>
+                <th>{t("adminAnalytics.status")}</th>
               </tr>
             </thead>
             <tbody>
@@ -230,8 +236,8 @@ export default function Analytics() {
                   <td>{d.occupancy}</td>
                   <td>{d.revenue}</td>
                   <td>
-                    <span className={`kc-badge ${d.status === "Completed" ? "kc-badge-green" : "kc-badge-yellow"}`}>
-                      {d.status}
+                    <span className={`inline-flex items-center gap-1.5 py-[5px] px-3 text-[12px] font-bold rounded-[20px] whitespace-nowrap ${d.status === "Completed" ? "bg-[rgba(22,163,74,0.14)] text-[#22c55e] border border-[rgba(34,197,94,0.3)]" : "bg-[rgba(234,179,8,0.14)] text-[#eab308] border border-[rgba(234,179,8,0.3)]"}`}>
+                      {t(d.status === "Completed" ? "adminAnalytics.completed" : "adminAnalytics.pending")}
                     </span>
                   </td>
                 </tr>

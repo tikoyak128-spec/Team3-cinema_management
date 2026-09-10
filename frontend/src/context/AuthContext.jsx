@@ -28,6 +28,14 @@ export function AuthProvider({ children }) {
     persist({ ...profile, token });
   };
 
+  const updateUser = (updates) => {
+    setUser((prev) => {
+      const next = { ...prev, ...updates };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
   const logout = async () => {
     try {
       await api.post("/logout");
@@ -39,15 +47,16 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        login,
-        loginWithToken,
-        logout,
-        isAuthenticated: !!user,
-      }}
-    >
+<AuthContext.Provider
+        value={{
+          user,
+          login,
+          loginWithToken,
+          updateUser,
+          logout,
+          isAuthenticated: !!user,
+        }}
+      >
       {children}
     </AuthContext.Provider>
   );

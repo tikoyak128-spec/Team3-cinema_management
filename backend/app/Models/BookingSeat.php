@@ -10,8 +10,7 @@ class BookingSeat extends Model
     protected $fillable = [
         'booking_id',
         'seat_id',
-        'ticket_code',
-        'status',
+        'price',
     ];
 
     public function booking(): BelongsTo

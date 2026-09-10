@@ -32,10 +32,10 @@ class MovieController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'category_id' => [
+            'movie_category_id' => [
                 'required',
                 'integer',
-                'exists:categories,id'
+                'exists:movie_categories,id'
             ],
             'title' => [
                 'required',
@@ -56,7 +56,7 @@ class MovieController extends Controller
                 'required',
                 'date'
             ],
-            'poster_url' => [
+            'poster' => [
                 'required',
                 'string',
                 'url'
@@ -65,6 +65,17 @@ class MovieController extends Controller
                 'nullable',
                 'string',
                 'url'
+            ],
+            'rating' => [
+                'nullable',
+                'numeric',
+                'min:0',
+                'max:10'
+            ],
+            'status' => [
+                'nullable',
+                'string',
+                'max:255'
             ],
         ]);
 
@@ -87,10 +98,10 @@ class MovieController extends Controller
         }
 
         $validated = $request->validate([
-            'category_id' => [
+            'movie_category_id' => [
                 'sometimes',
                 'integer',
-                'exists:categories,id'
+                'exists:movie_categories,id'
             ],
             'title' => [
                 'sometimes',
@@ -111,7 +122,7 @@ class MovieController extends Controller
                 'sometimes',
                 'date'
             ],
-            'poster_url' => [
+            'poster' => [
                 'sometimes',
                 'string',
                 'url'
@@ -120,6 +131,17 @@ class MovieController extends Controller
                 'nullable',
                 'string',
                 'url'
+            ],
+            'rating' => [
+                'nullable',
+                'numeric',
+                'min:0',
+                'max:10'
+            ],
+            'status' => [
+                'nullable',
+                'string',
+                'max:255'
             ],
         ]);
 

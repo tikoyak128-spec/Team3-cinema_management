@@ -10,6 +10,17 @@ class Cinema extends Model
     protected $fillable = [
         'name',
         'location',
+        'area',
+        'phone',
+        'hours',
+        'image',
+        'description',
+        'tagline',
+        'features',
+    ];
+
+    protected $casts = [
+        'features' => 'array',
     ];
 
     public function rooms(): HasMany

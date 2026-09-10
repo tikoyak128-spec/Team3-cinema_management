@@ -9,14 +9,18 @@ class Ticket extends Model
 {
     protected $fillable = [
         'booking_id',
+        'booking_seat_id',
         'ticket_code',
-        'price',
-        'seat_number',
         'status',
     ];
 
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);
+    }
+
+    public function bookingSeat(): BelongsTo
+    {
+        return $this->belongsTo(BookingSeat::class);
     }
 }

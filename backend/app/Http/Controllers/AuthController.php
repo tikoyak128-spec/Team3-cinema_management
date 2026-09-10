@@ -235,6 +235,43 @@ class AuthController extends Controller
         return response()->json($request->user());
     }
 
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'phone' => ['nullable', 'string', 'max:20'],
+            'avatar' => ['nullable', 'string', 'max:40000'],
+            'current_password' => ['nullable', 'string', 'required_with:new_password'],
+            'new_password' => ['nullable', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $user->name = $validated['name'];
+        $user->email = $validated['email'];
+        $user->phone = $validated['phone'] ?? null;
+        $user->avatar = $validated['avatar'] ?? $user->avatar;
+
+        if (!empty($validated['new_password'])) {
+            if (!Hash::check($validated['current_password'], $user->password)) {
+                return response()->json([
+                    'message' => 'Current password is incorrect.',
+                    'errors' => ['current_password' => ['The current password is incorrect.']],
+                ], 422);
+            }
+
+            $user->password = Hash::make($validated['new_password']);
+        }
+
+        $user->save();
+
+        return response()->json([
+            'message' => 'Profile updated successfully.',
+            'user' => $user,
+        ]);
+    }
+
     public function googleRedirect()
     {
         return Socialite::driver('google')

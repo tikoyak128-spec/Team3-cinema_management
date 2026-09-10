@@ -7,11 +7,17 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
+import { usePrefs } from "../../../../context/PrefsContext";
 import { AreaChart, BarChart } from "./charts";
-import "../admin.css";
-import "./analytics.css";
 
 const periods = ["Last 7 days", "Last 30 days", "Last quarter", "This year"];
+
+const periodKey = {
+  "Last 7 days": "adminReports.period7",
+  "Last 30 days": "adminReports.period30",
+  "Last quarter": "adminReports.periodQuarter",
+  "This year": "adminReports.periodYear",
+};
 
 const dailyRevenue = {
   labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
@@ -24,10 +30,10 @@ const occupancyByCinema = {
 };
 
 const summary = [
-  { label: "Total Revenue", value: "$46,540", icon: Wallet, color: "#22c55e", sub: "+11.2% vs previous" },
-  { label: "Total Bookings", value: "1,181", icon: Ticket, color: "#e50914", sub: "+8.4% vs previous" },
-  { label: "Tickets Sold", value: "1,694", icon: Users, color: "#60a5fa", sub: "+9.1% vs previous" },
-  { label: "Refunds", value: "$680", icon: RotateCcw, color: "#eab308", sub: "-2.3% vs previous" },
+  { labelKey: "totalRevenue", value: "$46,540", icon: Wallet, color: "#22c55e", sub: "+11.2% vs previous" },
+  { labelKey: "totalBookings", value: "1,181", icon: Ticket, color: "#e50914", sub: "+8.4% vs previous" },
+  { labelKey: "ticketsSold", value: "1,694", icon: Users, color: "#60a5fa", sub: "+9.1% vs previous" },
+  { labelKey: "refunds", value: "$680", icon: RotateCcw, color: "#eab308", sub: "-2.3% vs previous" },
 ];
 
 const salesRows = [
@@ -39,68 +45,69 @@ const salesRows = [
 ];
 
 export default function Reports() {
+  const { t } = usePrefs();
   const [period, setPeriod] = useState("Last 7 days");
 
   return (
-    <div className="kc-page">
-      <div className="kc-head">
+    <div className="flex flex-col gap-6 text-[var(--app-ink)] [&_*]:box-border">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1>Reports</h1>
-          <p className="kc-subtitle">Business and sales reports for record keeping.</p>
+          <h1 className="text-[26px] font-extrabold tracking-wide">{t("admin.reports")}</h1>
+          <p className="text-[14px] text-[var(--app-mute)] mt-1">{t("adminReports.subtitle")}</p>
         </div>
-        <div className="kc-actions">
-          <button className="kc-btn kc-btn-ghost">
-            <CalendarDays size={16} /> Schedule
+        <div className="flex gap-2.5 items-center flex-wrap">
+          <button className="inline-flex items-center gap-2 border-none cursor-pointer font-inherit py-[11px] px-5 text-[14px] font-bold rounded-xl transition-all duration-200 bg-transparent text-[var(--app-ink2)] border border-[var(--app-edge2)] hover:bg-[var(--app-fill)] hover:border-[var(--app-edge2)]">
+            <CalendarDays size={16} /> {t("adminReports.schedule")}
           </button>
-          <button className="kc-btn kc-btn-primary">
-            <Download size={16} /> Export CSV
+          <button className="inline-flex items-center gap-2 border-none cursor-pointer font-inherit py-[11px] px-5 text-[14px] font-bold rounded-xl transition-all duration-200 bg-[#e50914] text-white shadow-[0_4px_14px_rgba(229,9,20,0.35)] hover:bg-[#f40612] hover:-translate-y-px">
+            <Download size={16} /> {t("adminReports.exportCsv")}
           </button>
         </div>
       </div>
 
-      <div className="kc-toolbar">
-        <div className="kc-filters">
-          <select className="kc-select" value={period} onChange={(e) => setPeriod(e.target.value)}>
+      <div className="flex items-center justify-between gap-4 flex-wrap mb-1">
+        <div className="flex gap-2.5 flex-wrap items-center">
+          <select className="bg-[var(--app-panel)] border border-[var(--app-edge)] text-[var(--app-ink2)] font-inherit text-[13px] py-2.5 px-3 rounded-[10px] outline-none cursor-pointer" value={period} onChange={(e) => setPeriod(e.target.value)}>
             {periods.map((p) => (
-              <option key={p}>{p}</option>
+              <option key={p} value={p}>{t(periodKey[p])}</option>
             ))}
           </select>
-          <span className="kc-subtitle">Reporting period: {period}</span>
+          <span className="text-[14px] text-[var(--app-mute)]">{t("adminReports.periodLabel", { period: t(periodKey[period]) })}</span>
         </div>
       </div>
 
-      <div className="an-stats">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-[18px]">
         {summary.map((s) => {
           const Icon = s.icon;
           return (
-            <div className="an-stat" key={s.label}>
-              <div className="an-stat-top">
+            <div className="bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-2xl p-[18px_20px] transition-all duration-200 hover:-translate-y-[3px] hover:border-[rgba(229,9,20,0.4)]" key={s.labelKey}>
+              <div className="flex items-center justify-between mb-[14px]">
                 <span
-                  className="an-stat-icon"
-                  style={{ background: `${s.color}1f`, color: s.color }}
+                  className="w-[42px] h-[42px] rounded-xl flex items-center justify-center bg-[color-mix(in_srgb,var(--c)_12%,transparent)] text-[var(--c)]"
+                  style={{ "--c": s.color }}
                 >
                   <Icon size={20} />
                 </span>
               </div>
-              <div className="an-stat-value">{s.value}</div>
-              <div className="an-stat-label">{s.label}</div>
-              <div className="an-stat-sub">{s.sub}</div>
+              <div className="text-[26px] font-extrabold tracking-wide">{s.value}</div>
+              <div className="text-[13px] text-[var(--app-mute)] mt-1">{t(`adminReports.${s.labelKey}`)}</div>
+              <div className="text-[12px] text-[var(--app-mute)] mt-[6px]">{s.sub}</div>
             </div>
           );
         })}
       </div>
 
-      <div className="an-grid">
-        <div className="an-grid-stack">
-          <div className="an-card">
-            <div className="an-card-head">
-              <h3>Revenue Trend</h3>
-              <span className="an-card-meta">
-                <span className="dot" style={{ background: "#e50914" }} />
-                {period}
+      <div className="grid grid-cols-[2fr_1fr] gap-[18px] max-[1100px]:grid-cols-1">
+        <div className="flex flex-col gap-[18px] min-w-0">
+          <div className="bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-2xl p-5">
+            <div className="flex items-center justify-between gap-2.5 flex-wrap mb-[18px]">
+              <h3 className="text-[16px] font-extrabold">{t("adminReports.revenueTrend")}</h3>
+              <span className="text-[12px] text-[var(--app-mute)] inline-flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#e50914]" />
+                {t(periodKey[period])}
               </span>
             </div>
-            <div className="an-chart-wrap">
+            <div className="w-full">
               <AreaChart
                 labels={dailyRevenue.labels}
                 values={dailyRevenue.values}
@@ -110,12 +117,12 @@ export default function Reports() {
             </div>
           </div>
 
-          <div className="an-card">
-            <div className="an-card-head">
-              <h3>Occupancy by Month</h3>
-              <span className="an-card-meta">%</span>
+          <div className="bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-2xl p-5">
+            <div className="flex items-center justify-between gap-2.5 flex-wrap mb-[18px]">
+              <h3 className="text-[16px] font-extrabold">{t("adminReports.occupancyByMonth")}</h3>
+              <span className="text-[12px] text-[var(--app-mute)] inline-flex items-center gap-1.5">%</span>
             </div>
-            <div className="an-chart-wrap">
+            <div className="w-full">
               <BarChart
                 labels={occupancyByCinema.labels}
                 values={occupancyByCinema.values}
@@ -126,53 +133,48 @@ export default function Reports() {
           </div>
         </div>
 
-        <div className="an-card">
-          <div className="an-card-head">
-            <h3>Notes</h3>
+        <div className="bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-2xl p-5">
+          <div className="flex items-center justify-between gap-2.5 flex-wrap mb-[18px]">
+            <h3 className="text-[16px] font-extrabold">{t("adminReports.notes")}</h3>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div className="flex flex-col gap-4">
             {[
-              ["Peak hours", "Friday–Sunday evening shows account for 62% of weekly revenue."],
-              ["Best performer", "Legend Phnom Penh leads ticket sales with 1,240 tickets."],
-              ["Top movie", "The Last Emperor remains the highest grossing title this period."],
-              ["Refunds", "Most refunds occur within 2 hours before showtime."],
-            ].map(([t, d]) => (
+              ["note1T", "note1D"],
+              ["note2T", "note2D"],
+              ["note3T", "note3D"],
+              ["note4T", "note4D"],
+            ].map(([titleKey, descKey]) => (
               <div
-                key={t}
-                style={{
-                  padding: "14px",
-                  background: "#181818",
-                  borderRadius: "12px",
-                  border: "1px solid #232323",
-                }}
+                key={titleKey}
+                className="p-[14px] bg-[var(--app-panel2)] rounded-[12px] border border-[var(--app-edge)]"
               >
-                <div style={{ fontWeight: 700, fontSize: "13px", color: "#e50914", marginBottom: "4px" }}>
-                  {t}
+                <div className="font-bold text-[13px] text-[#e50914] mb-1">
+                  {t(`adminReports.${titleKey}`)}
                 </div>
-                <div style={{ fontSize: "13px", color: "#a0a0a0", lineHeight: 1.5 }}>{d}</div>
+                <div className="text-[13px] text-[var(--app-mute)] leading-[1.5]">{t(`adminReports.${descKey}`)}</div>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="an-table-card">
-        <div style={{ padding: "20px 20px 0" }}>
-          <div className="an-card-head" style={{ marginBottom: 0 }}>
-            <h3>Sales Summary</h3>
-            <span className="an-card-meta">{period}</span>
+      <div className="bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-2xl overflow-hidden">
+        <div className="p-[20px_20px_0]">
+          <div className="flex items-center justify-between gap-2.5 flex-wrap mb-0">
+            <h3 className="text-[16px] font-extrabold">{t("adminReports.salesSummary")}</h3>
+            <span className="text-[12px] text-[var(--app-mute)] inline-flex items-center gap-1.5">{t(periodKey[period])}</span>
           </div>
         </div>
-        <div className="kc-table-wrap">
-          <table className="kc-table">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-[14px] [&>thead_th]:text-left [&>thead_th]:py-[14px] [&>thead_th]:px-[18px] [&>thead_th]:text-[var(--app-mute)] [&>thead_th]:text-[12px] [&>thead_th]:font-bold [&>thead_th]:uppercase [&>thead_th]:tracking-widest [&>thead_th]:border-b [&>thead_th]:border-[var(--app-edge)] [&>thead_th]:bg-[var(--app-fill)] [&>thead_th]:whitespace-nowrap [&>th]:sticky [&>th]:top-[70px] [&>th]:z-5 [&>th]:bg-[var(--app-panel)] [&>tbody_td]:py-[14px] [&>tbody_td]:px-[18px] [&>tbody_td]:border-b [&>tbody_td]:border-[var(--app-edge)] [&>tbody_td]:text-[var(--app-ink2)] [&>tbody_td]:align-middle [&>tbody>tr]:transition-colors [&>tbody>tr]:duration-150 [&>tbody>tr:hover]:bg-[var(--app-fill)] [&>tbody>tr:last-child>td]:border-b-0">
             <thead>
               <tr>
-                <th>Date</th>
-                <th>Bookings</th>
-                <th>Tickets</th>
-                <th>Revenue</th>
-                <th>Refunds</th>
-                <th>Status</th>
+                <th>{t("adminReports.date")}</th>
+                <th>{t("adminReports.bookings")}</th>
+                <th>{t("adminReports.tickets")}</th>
+                <th>{t("adminReports.revenue")}</th>
+                <th>{t("adminReports.refunds")}</th>
+                <th>{t("adminReports.status")}</th>
               </tr>
             </thead>
             <tbody>
@@ -184,8 +186,8 @@ export default function Reports() {
                   <td>{r.revenue}</td>
                   <td>{r.refunds}</td>
                   <td>
-                    <span className={`kc-badge ${r.status === "Closed" ? "kc-badge-green" : "kc-badge-yellow"}`}>
-                      {r.status}
+                    <span className={`inline-flex items-center gap-1.5 py-[5px] px-3 text-[12px] font-bold rounded-[20px] whitespace-nowrap ${r.status === "Closed" ? "bg-[rgba(22,163,74,0.14)] text-[#22c55e] border border-[rgba(34,197,94,0.3)]" : "bg-[rgba(234,179,8,0.14)] text-[#eab308] border border-[rgba(234,179,8,0.3)]"}`}>
+                      {t(r.status === "Closed" ? "adminReports.closed" : "adminReports.open")}
                     </span>
                   </td>
                 </tr>

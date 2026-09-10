@@ -10,9 +10,22 @@ class CategoryController extends Controller
 {
     public function index(): JsonResponse
     {
-        $categories = Category::all();
+        $categories = Category::withCount('movies')->get();
 
         return response()->json($categories);
+    }
+
+    public function show(int $id): JsonResponse
+    {
+        $category = Category::withCount('movies')->find($id);
+
+        if (!$category) {
+            return response()->json([
+                'message' => 'Category not found'
+            ], 404);
+        }
+
+        return response()->json($category);
     }
 
     public function store(Request $request): JsonResponse

@@ -41,4 +41,13 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI'),
     ],
 
+    'bakong' => [
+        'token' => env('BAKONG_API_TOKEN'),
+        'url' => env('BAKONG_API_URL', 'https://api-bakong.nbc.gov.kh'),
+        'account_id' => env('BAKONG_ACCOUNT_ID'),
+        'merchant_name' => env('BAKONG_MERCHANT_NAME', 'Khmer Cinema'),
+        'merchant_city' => env('BAKONG_MERCHANT_CITY', 'Phnom Penh'),
+        'currency' => env('BAKONG_CURRENCY', 'KHR'),
+    ],
+
 ];

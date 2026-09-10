@@ -13,7 +13,7 @@ class CinemaController extends Controller
     {
         $cinemas = Cinema::with('rooms')->get();
 
-        return response()->json($cinemas);
+        return response()->json($cinemas->map(fn (Cinema $cinema) => $this->decorate($cinema)));
     }
 
     public function show(int $id): JsonResponse
@@ -26,7 +26,16 @@ class CinemaController extends Controller
             ], 404);
         }
 
-        return response()->json($cinema);
+        return response()->json($this->decorate($cinema));
+    }
+
+    private function decorate(Cinema $cinema): array
+    {
+        $data = $cinema->toArray();
+        $data['screen_count'] = $cinema->rooms->count();
+        $data['seats_count'] = $cinema->rooms->sum('total_seats');
+
+        return $data;
     }
 
     public function store(Request $request): JsonResponse
@@ -42,12 +51,19 @@ class CinemaController extends Controller
                 'required',
                 'string'
             ],
+            'area' => ['nullable', 'string', 'max:100'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'hours' => ['nullable', 'string', 'max:50'],
+            'image' => ['nullable', 'string', 'max:500'],
+            'tagline' => ['nullable', 'string', 'max:255'],
+            'features' => ['nullable', 'array'],
+            'features.*' => ['string', 'max:50'],
         ]);
 
         $cinema = Cinema::create($validated);
 
         return response()->json(
-            $cinema->load('rooms'),
+            $this->decorate($cinema->load('rooms')),
             201
         );
     }
@@ -73,12 +89,19 @@ class CinemaController extends Controller
                 'sometimes',
                 'string'
             ],
+            'area' => ['sometimes', 'string', 'max:100'],
+            'phone' => ['sometimes', 'string', 'max:50'],
+            'hours' => ['sometimes', 'string', 'max:50'],
+            'image' => ['sometimes', 'string', 'max:500'],
+            'tagline' => ['sometimes', 'string', 'max:255'],
+            'features' => ['sometimes', 'array'],
+            'features.*' => ['string', 'max:50'],
         ]);
 
         $cinema->update($validated);
 
         return response()->json(
-            $cinema->load('rooms')
+            $this->decorate($cinema->load('rooms'))
         );
     }
 

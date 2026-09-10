@@ -1,33 +1,56 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import Navbar from "../components/Navbar";
+import { useNavigate } from "react-router-dom";
+import { usePrefs } from "../context/PrefsContext";
+import MovieCard from "../components/MovieCard";
+import CinemaCard from "../components/CinemaCard";
 import {
-  navLinks,
   slideImages,
   nowShowing,
   comingSoon,
-  promotions,
-  cinemas,
 } from "../data/cinemaData";
-import styles from "../styles/homeStyles";
-import { ArrowRight, Clapperboard, MapPin, Play } from "lucide-react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import api from "../api/client";
+import { Play, X, ZoomIn } from "lucide-react";
+
+const galleryImages = [
+  { src: "https://www.areacambodia.com/wp-content/uploads/2023/09/Major%E2%80%8B-Cineplex-Siem-Reap-Movie-Theater-in-Siem-Reap-on-Sivutha-Road.jpg", alt: "Cinema Hall Interior", caption: "Premium Cinema Halls" },
+  { src: "https://cambodiainvestmentreview.com/wp-content/uploads/2023/10/Capture4.jpg", alt: "Movie Screen", caption: "Immersive Big Screen" },
+  { src: "https://images.unsplash.com/photo-1574267432553-4b4628081c31?w=800&h=600&fit=crop", alt: "Cinema Lobby", caption: "Elegant Lobby Area" },
+  { src: "https://images.unsplash.com/photo-1440404653325-ab127d49abc1?w=800&h=600&fit=crop", alt: "Classic Cinema", caption: "Timeless Cinema Vibes" },
+  { src: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=800&h=1000&fit=crop", alt: "Film Production", caption: "Behind The Scenes" },
+  { src: "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&h=600&fit=crop", alt: "Cinema Audience", caption: "Unforgettable Moments" },
+];
 
 export default function Home() {
   const navigate = useNavigate();
+  const { t } = usePrefs();
   const [activeTab, setActiveTab] = useState("now-showing");
   const [currentSlide, setCurrentSlide] = useState(0);
-  const sliderRef = useRef(null);
+  const [heroIndex, setHeroIndex] = useState(0);
+  const [heroFading, setHeroFading] = useState(false);
+  const [selectedGalleryImage, setSelectedGalleryImage] = useState(null);
+  const [dbCinemas, setDbCinemas] = useState([]);
   const timerRef = useRef(null);
 
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get("/cinemas")
+      .then((res) => {
+        if (cancelled) return;
+        const list = res.data;
+        if (Array.isArray(list) && list.length > 0) setDbCinemas(list);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const heroMovies = nowShowing;
   const totalSlides = slideImages.length;
 
   const goToNext = useCallback(() => {
     setCurrentSlide((prev) => (prev + 1) % totalSlides);
-  }, [totalSlides]);
-
-  const goToPrev = useCallback(() => {
-    setCurrentSlide((prev) => (prev - 1 + totalSlides) % totalSlides);
   }, [totalSlides]);
 
   useEffect(() => {
@@ -35,118 +58,180 @@ export default function Home() {
     return () => clearInterval(timerRef.current);
   }, [goToNext]);
 
-  const handleSliderEnter = () => clearInterval(timerRef.current);
-  const handleSliderLeave = () => {
-    clearInterval(timerRef.current);
-    timerRef.current = setInterval(goToNext, 3500);
+  // Hero slideshow auto-advance
+  useEffect(() => {
+    const heroTimer = setInterval(() => {
+      setHeroFading(true);
+      setTimeout(() => {
+        setHeroIndex((prev) => (prev + 1) % heroMovies.length);
+        setHeroFading(false);
+      }, 500);
+    }, 5000);
+    return () => clearInterval(heroTimer);
+  }, [heroMovies.length]);
+
+  const goToHeroSlide = (idx) => {
+    if (idx === heroIndex) return;
+    setHeroFading(true);
+    setTimeout(() => {
+      setHeroIndex(idx);
+      setHeroFading(false);
+    }, 500);
   };
 
   const movieList = activeTab === "now-showing" ? nowShowing : comingSoon;
+  const heroMovie = heroMovies[heroIndex];
 
   return (
-    <div className="home-page">
-      <style>{styles}</style>
+    <>
+      {/* ===== HERO BANNER - MOVIE SLIDESHOW ===== */}
+      <section className="relative min-h-[85vh] sm:min-h-[88vh] md:min-h-[90vh] lg:min-h-screen flex items-center overflow-hidden bg-[var(--app-page)]">
+        {/* Slideshow Backgrounds */}
+        {heroMovies.map((movie, idx) => (
+          <div
+            key={movie.title}
+            className={`absolute inset-0 bg-cover bg-center bg-[image:var(--hero-bg)] transition-opacity duration-[1200ms] ease-in-out ${idx === heroIndex ? "opacity-100" : "opacity-0"}`}
+            style={{
+              "--hero-bg": `url('${movie.poster.replace('/w500/', '/w1920/')}')`,
+              animation: idx === heroIndex ? "heroZoom 8s ease-in-out forwards" : "none",
+            }}
+          />
+        ))}
 
-      {/* ===== HEADER / NAVBAR ===== */}
-      <Navbar />
+        {/* Gradient Overlays */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(5,5,5,0.95),rgba(5,5,5,0.6)_50%,transparent)] z-[1]" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_top,#050505_0%,rgba(5,5,5,0.6)_40%,rgba(0,0,0,0.3)_100%)] z-[1]" />
 
-      {/* ===== HERO BANNER ===== */}
-      <section className="home-hero">
-        <div className="home-hero-bg" />
-        <div className="home-hero-overlay" />
-        <div className="home-hero-content">
-          <span className="home-hero-badge">Now Playing</span>
-          <h1 className="home-hero-title">Experience Cinema<br />Like Never Before</h1>
-          <p className="home-hero-subtitle">
-            Book your tickets online and enjoy the latest blockbusters in the
-            heart of Phnom Penh.
+        {/* Decorative Glows */}
+        <div className="absolute top-1/4 left-[10%] sm:left-[15%] w-[160px] h-[160px] sm:w-[320px] sm:h-[320px] md:w-[400px] md:h-[400px] rounded-full bg-[rgba(229,9,20,0.15)] blur-[80px] sm:blur-[100px] md:blur-[120px] pointer-events-none z-[1]" />
+        <div className="absolute bottom-1/3 right-[5%] sm:right-[10%] w-[140px] h-[140px] sm:w-[240px] sm:h-[240px] md:w-[300px] md:h-[300px] rounded-full bg-[rgba(120,20,200,0.1)] blur-[60px] sm:blur-[80px] md:blur-[100px] pointer-events-none z-[1]" />
+
+        {/* Content */}
+        <div className="relative z-[2] w-full max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8 pt-16 sm:pt-20 md:pt-28 lg:pt-32 pb-20 sm:pb-24 md:pb-24">
+          <h1 className={`text-[26px] min-[400px]:text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-black leading-[1.08] tracking-tight text-balance mb-3 sm:mb-4 text-white transition-all duration-500 delay-75 ${heroFading ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"}`}>{heroMovie.title}</h1>
+
+          <div className={`flex flex-wrap items-center gap-x-2 sm:gap-x-3 md:gap-x-4 gap-y-1.5 sm:gap-y-2 mb-3 sm:mb-4 md:mb-5 transition-all duration-500 delay-150 ${heroFading ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"}`}>
+            <span className="text-sm sm:text-base md:text-lg text-[#c9c9c9] font-medium">{heroMovie.genre}</span>
+            <span className="inline-flex items-center gap-1 bg-brand/20 border border-brand/40 text-brand text-xs sm:text-sm font-bold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg">★ {heroMovie.rating}</span>
+            <span className="text-xs sm:text-sm text-[var(--app-mute)]">{heroMovie.date}</span>
+          </div>
+
+          <p className={`text-sm sm:text-base md:text-lg text-[var(--app-mute)] max-w-[540px] leading-relaxed mb-6 sm:mb-7 md:mb-9 transition-all duration-500 delay-200 ${heroFading ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"}`}>
+            {t("home.heroTagline")}
           </p>
-          <div className="home-hero-actions">
+
+          <div className={`flex flex-col sm:flex-row flex-wrap gap-2.5 sm:gap-3 md:gap-4 mb-7 sm:mb-9 md:mb-11 transition-all duration-500 delay-250 ${heroFading ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"}`}>
             <button
-              className="home-btn home-btn-primary"
-              onClick={() => navigate("/showtimes")}
+              className="inline-flex items-center justify-center gap-2 w-full sm:w-auto bg-brand hover:bg-brand-hover text-white font-bold text-sm sm:text-[15px] px-6 sm:px-7 md:px-8 py-3.5 rounded-full transition-all duration-200 shadow-[0_8px_24px_rgba(229,9,20,0.4)] hover:-translate-y-0.5 cursor-pointer"
+              onClick={() => navigate(`/watch/${encodeURIComponent(heroMovie.title)}`)}
             >
-              Book Tickets
+              <Play size={18} fill="white" /> {t("home.watchTrailer")}
             </button>
             <button
-              className="home-btn home-btn-ghost"
-              onClick={() => navigate("/coming-soon")}
+              className="inline-flex items-center justify-center gap-2 w-full sm:w-auto bg-transparent border border-white/30 hover:bg-white/10 text-white font-bold text-sm sm:text-[15px] px-6 sm:px-7 md:px-8 py-3.5 rounded-full transition-all duration-200 cursor-pointer"
+              onClick={() => navigate(`/booking/${encodeURIComponent(heroMovie.title)}`)}
             >
-              Coming Soon
+              {t("home.getTickets")}
             </button>
           </div>
+
+          <div className={`flex flex-wrap items-center gap-x-4 sm:gap-x-6 md:gap-x-7 gap-y-3 sm:gap-y-4 transition-all duration-500 delay-250 ${heroFading ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"}`}>
+            <div className="flex flex-col items-center gap-0.5">
+              <span className="text-xl sm:text-2xl md:text-3xl font-black text-white">4K</span>
+              <span className="text-[9px] sm:text-[10px] text-[var(--app-mute)] font-semibold uppercase tracking-wider">{t("home.screens")}</span>
+            </div>
+            <div className="w-px h-6 sm:h-8 bg-white/15" />
+            <div className="flex flex-col items-center gap-0.5">
+              <span className="text-xl sm:text-2xl md:text-3xl font-black text-white">7.1</span>
+              <span className="text-[9px] sm:text-[10px] text-[var(--app-mute)] font-semibold uppercase tracking-wider">Dolby Atmos</span>
+            </div>
+            <div className="w-px h-6 sm:h-8 hidden sm:block bg-white/15" />
+            <div className="flex flex-col items-center gap-0.5">
+              <span className="text-xl sm:text-2xl md:text-3xl font-black text-white">100%</span>
+              <span className="text-[9px] sm:text-[10px] text-[var(--app-mute)] font-semibold uppercase tracking-wider">{t("home.onlineBooking")}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Navigation Dots */}
+        <div className="absolute bottom-5 sm:bottom-8 md:bottom-10 left-1/2 -translate-x-1/2 z-[2] flex items-center gap-1.5 sm:gap-2">
+          {heroMovies.map((movie, idx) => (
+            <button
+              key={movie.title}
+              className={`rounded-full cursor-pointer transition-all duration-300 relative ${idx === heroIndex ? "w-6 sm:w-8 md:w-10 h-2 sm:h-2.5 bg-brand" : "w-2 h-2 sm:w-2.5 sm:h-2.5 bg-white/25 hover:bg-white/50"}`}
+              onClick={() => goToHeroSlide(idx)}
+              aria-label={`Go to ${movie.title}`}
+            >
+              {idx === heroIndex && <span className="absolute inset-0 bg-brand/40 rounded-full animate-ping" />}
+            </button>
+          ))}
         </div>
       </section>
 
       {/* ===== ABOUT SECTION ===== */}
-      <section className="home-section home-about" id="about">
-        <div className="home-about-inner">
-          <div className="home-about-text">
-            <span className="home-about-badge">About Us</span>
-            <h2 className="home-about-title">
-              Cambodia's Premier<br />Cinema Experience
+      <section className="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8 py-14 sm:py-16 md:py-20 scroll-mt-20" id="about">
+        <div className="grid grid-cols-1 md:grid-cols-[1.2fr_1fr] gap-8 sm:gap-10 lg:gap-16 items-center">
+          <div>
+           <h2 className="text-[24px] sm:text-3xl md:text-[42px] font-black leading-[1.15] mb-4">
+              {t("home.aboutTitle")}
             </h2>
-            <p className="home-about-desc">
-              Since 2015, Khmer Cinema has been the leading cinema chain in Cambodia,
-              delivering world-class entertainment to audiences across the nation. With
-              cutting-edge technology, comfortable seating, and an unmatched selection
-              of local and international films, we bring stories to life on the big screen.
+            <p className="text-sm sm:text-[15px] leading-relaxed text-[var(--app-mute)] mb-6 sm:mb-7">
+              {t("home.aboutText")}
             </p>
-            <div className="home-about-stats">
-              <div className="home-about-stat">
-                <span className="home-about-stat-num">50+</span>
-                <span className="home-about-stat-label">Halls Nationwide</span>
+            <div className="flex gap-5 sm:gap-6 md:gap-8 flex-wrap">
+              <div className="flex flex-col gap-1">
+                <span className="text-[26px] sm:text-[30px] md:text-[32px] font-black bg-[linear-gradient(135deg,#e50914,#ff6b6b)] bg-clip-text text-transparent">50+</span>
+                <span className="text-xs sm:text-[13px] text-[var(--app-mute)] font-semibold">{t("home.hallsNationwide")}</span>
               </div>
-              <div className="home-about-stat">
-                <span className="home-about-stat-num">1M+</span>
-                <span className="home-about-stat-label">Happy Customers</span>
+              <div className="flex flex-col gap-1">
+                <span className="text-[26px] sm:text-[30px] md:text-[32px] font-black bg-[linear-gradient(135deg,#e50914,#ff6b6b)] bg-clip-text text-transparent">1M+</span>
+                <span className="text-xs sm:text-[13px] text-[var(--app-mute)] font-semibold">{t("home.happyCustomers")}</span>
               </div>
-              <div className="home-about-stat">
-                <span className="home-about-stat-num">200+</span>
-                <span className="home-about-stat-label">Movies Per Year</span>
+              <div className="flex flex-col gap-1">
+                <span className="text-[26px] sm:text-[30px] md:text-[32px] font-black bg-[linear-gradient(135deg,#e50914,#ff6b6b)] bg-clip-text text-transparent">200+</span>
+                <span className="text-xs sm:text-[13px] text-[var(--app-mute)] font-semibold">{t("home.moviesPerYear")}</span>
               </div>
             </div>
           </div>
-          <div className="home-about-visual">
-            <div className="home-about-img-wrap">
+          <div className="relative">
+            <div className="relative">
               <img
-                className="home-about-img"
+                className="w-full h-[220px] sm:h-[280px] md:h-[380px] object-cover rounded-xl sm:rounded-2xl relative z-[2] shadow-[0_24px_50px_rgba(0,0,0,0.6)]"
                 src="https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600&h=400&fit=crop"
                 alt="Khmer Cinema"
+                loading="lazy"
               />
-              <div className="home-about-img-accent" />
+              <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(229,9,20,0.15),transparent_60%)] translate-x-2 translate-y-2 sm:translate-x-3 sm:translate-y-3 md:translate-x-4 md:translate-y-4 z-[1] rounded-xl sm:rounded-2xl" />
             </div>
           </div>
         </div>
       </section>
 
       {/* ===== IMAGE SLIDER ===== */}
-      <section className="home-section home-slider-section">
-        <div className="home-section-head">
-          <h2 className="home-section-title">Our Cinemas in Action</h2>
+      <section className="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8 pt-0 pb-14 sm:pb-16 md:pb-20">
+        <div className="flex items-center justify-between mb-6 sm:mb-8 flex-wrap gap-3">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold">{t("home.cinemaAction")}</h2>
         </div>
-        <div className="home-slider" ref={sliderRef} onMouseEnter={handleSliderEnter} onMouseLeave={handleSliderLeave}>
+        <div className="relative w-full overflow-hidden rounded-xl sm:rounded-2xl aspect-video md:aspect-[21/8] shadow-[0_20px_50px_rgba(0,0,0,0.6)]">
           <div
-            className="home-slider-track"
-            style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+            className="flex h-full translate-x-[var(--slide-x)] transition-transform duration-[700ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+            style={{ "--slide-x": `-${currentSlide * 100}%` }}
           >
             {slideImages.map((slide, idx) => (
-              <div className="home-slider-slide" key={idx}>
-                <img className="home-slider-img" src={slide.src} alt={slide.alt} />
-                <div className="home-slider-overlay" />
-                <div className="home-slider-caption">
-                  <p>{slide.caption}</p>
+              <div className="relative flex-[0_0_100%] h-full" key={idx}>
+                <img className="w-full h-full object-cover block" src={slide.src} alt={slide.alt} loading="lazy" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5 md:p-7 z-[2]">
+                  <p className="text-sm sm:text-base md:text-xl font-extrabold text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.6)]">{slide.caption}</p>
                 </div>
               </div>
             ))}
           </div>
-          <button className="home-slider-btn prev" onClick={goToPrev}>‹</button>
-          <button className="home-slider-btn next" onClick={goToNext}>›</button>
-          <div className="home-slider-dots">
+          <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 md:bottom-4 md:right-6 z-[3] flex gap-1.5 sm:gap-2">
             {slideImages.map((_, idx) => (
               <button
                 key={idx}
-                className={`home-slider-dot ${idx === currentSlide ? "active" : ""}`}
+                className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-white/40 cursor-pointer transition-all ${idx === currentSlide ? "bg-brand scale-125" : ""}`}
                 onClick={() => setCurrentSlide(idx)}
               />
             ))}
@@ -154,59 +239,145 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ===== NOW SHOWING / COMING SOON ===== */}
-      <section className="home-section" id="showtimes">
-        <div className="home-section-head">
-          <h2 className="home-section-title">Now Showing</h2>
-          <div className="home-tabs">
+      {/* ===== GALLERY ===== */}
+      <section className="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8 py-14 sm:py-16 md:py-20 scroll-mt-20" id="gallery">
+        <div className="text-center mb-10 sm:mb-12">
+          <h2 className="text-2xl sm:text-3xl md:text-[42px] font-black leading-[1.15]">
+            {t("home.galleryTitle")}
+          </h2>
+        </div>
+        {/* Mobile: 2-col simple grid */}
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 md:hidden">
+          {galleryImages.map((img, idx) => (
+            <div
+              key={idx}
+              className="relative rounded-xl overflow-hidden cursor-pointer group aspect-[4/3]"
+              onClick={() => setSelectedGalleryImage(img)}
+            >
+              <img className="w-full h-full object-cover block transition-transform duration-500 group-hover:scale-110" src={img.src} alt={img.alt} loading="lazy" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <div className="w-10 h-10 rounded-full bg-brand/90 flex items-center justify-center shadow-[0_4px_20px_rgba(229,9,20,0.5)] scale-75 group-hover:scale-100 transition-transform duration-300">
+                  <ZoomIn size={18} className="text-white" />
+                </div>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                <p className="text-xs font-bold text-white [text-shadow:0_2px_8px_rgba(0,0,0,0.6)]">{img.caption}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* Tablet & Desktop: 3-col masonry that fills the space */}
+        <div className="hidden md:grid grid-cols-3 gap-4 lg:gap-5" style={{ gridAutoRows: "220px" }}>
+          {/* Col 1: two normal images */}
+          <div className="grid grid-rows-2 gap-4 lg:gap-5">
+            {[galleryImages[0], galleryImages[1]].map((img, i) => (
+              <div
+                key={i}
+                className="relative rounded-2xl overflow-hidden cursor-pointer group"
+                onClick={() => setSelectedGalleryImage(img)}
+              >
+                <img className="w-full h-full object-cover block transition-transform duration-500 group-hover:scale-110" src={img.src} alt={img.alt} loading="lazy" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <div className="w-12 h-12 rounded-full bg-brand/90 flex items-center justify-center shadow-[0_4px_20px_rgba(229,9,20,0.5)] scale-75 group-hover:scale-100 transition-transform duration-300">
+                    <ZoomIn size={20} className="text-white" />
+                  </div>
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                  <p className="text-sm font-bold text-white [text-shadow:0_2px_8px_rgba(0,0,0,0.6)]">{img.caption}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Col 2: one tall image spanning full height */}
+          <div
+            className="relative rounded-2xl overflow-hidden cursor-pointer group"
+            style={{ gridRow: "1" }}
+            onClick={() => setSelectedGalleryImage(galleryImages[2])}
+          >
+            <img className="w-full h-full object-cover block transition-transform duration-500 group-hover:scale-110" src={galleryImages[2].src} alt={galleryImages[2].alt} loading="lazy" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <div className="w-14 h-14 rounded-full bg-brand/90 flex items-center justify-center shadow-[0_4px_20px_rgba(229,9,20,0.5)] scale-75 group-hover:scale-100 transition-transform duration-300">
+                <ZoomIn size={24} className="text-white" />
+              </div>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 p-5 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+              <p className="text-base font-bold text-white [text-shadow:0_2px_8px_rgba(0,0,0,0.6)]">{galleryImages[2].caption}</p>
+            </div>
+          </div>
+          {/* Col 3: two normal images */}
+          <div className="grid grid-rows-2 gap-4 lg:gap-5">
+            {[galleryImages[3], galleryImages[4]].map((img, i) => (
+              <div
+                key={i}
+                className="relative rounded-2xl overflow-hidden cursor-pointer group"
+                onClick={() => setSelectedGalleryImage(img)}
+              >
+                <img className="w-full h-full object-cover block transition-transform duration-500 group-hover:scale-110" src={img.src} alt={img.alt} loading="lazy" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <div className="w-12 h-12 rounded-full bg-brand/90 flex items-center justify-center shadow-[0_4px_20px_rgba(229,9,20,0.5)] scale-75 group-hover:scale-100 transition-transform duration-300">
+                    <ZoomIn size={20} className="text-white" />
+                  </div>
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                  <p className="text-sm font-bold text-white [text-shadow:0_2px_8px_rgba(0,0,0,0.6)]">{img.caption}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Gallery Lightbox */}
+      {selectedGalleryImage && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 sm:p-8 animate-[fadeIn_0.2s_ease]"
+          onClick={() => setSelectedGalleryImage(null)}
+        >
+          <button
+            className="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white hover:bg-brand hover:border-brand transition-all cursor-pointer z-10"
+            onClick={() => setSelectedGalleryImage(null)}
+          >
+            <X size={20} />
+          </button>
+          <img
+            className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.8)] animate-[scaleIn_0.25s_ease]"
+            src={selectedGalleryImage.src}
+            alt={selectedGalleryImage.alt}
+            onClick={(e) => e.stopPropagation()}
+          />
+          <p className="absolute bottom-6 left-1/2 -translate-x-1/2 text-sm sm:text-base font-bold text-white bg-black/50 backdrop-blur-sm px-5 py-2.5 rounded-full border border-white/10">
+            {selectedGalleryImage.caption}
+          </p>
+        </div>
+      )}
+
+      {/*  NOW SHOWING / COMING SOON */}
+      <section className="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8 py-14 sm:py-16 md:py-20 scroll-mt-20" id="showtimes">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-7 sm:mb-8 md:mb-10">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold">{t("nav.nowShowing")}</h2>
+          <div className="flex w-full sm:w-auto bg-[var(--app-panel2)] border border-[var(--app-edge)] rounded-full p-1 gap-1">
             <button
-              className={`home-tab ${activeTab === "now-showing" ? "active" : ""}`}
+              className={`flex-1 sm:flex-none text-[13px] font-bold px-4 sm:px-5 py-2.5 rounded-full text-[var(--app-mute)] transition-all cursor-pointer ${activeTab === "now-showing" ? "bg-brand text-white shadow-[0_4px_14px_rgba(229,9,20,0.35)]" : ""}`}
               onClick={() => setActiveTab("now-showing")}
             >
-              Now Showing
+              {t("nav.nowShowing")}
             </button>
             <button
-              className={`home-tab ${activeTab === "coming-soon" ? "active" : ""}`}
+              className={`flex-1 sm:flex-none text-[13px] font-bold px-4 sm:px-5 py-2.5 rounded-full text-[var(--app-mute)] transition-all cursor-pointer ${activeTab === "coming-soon" ? "bg-brand text-white shadow-[0_4px_14px_rgba(229,9,20,0.35)]" : ""}`}
               onClick={() => setActiveTab("coming-soon")}
             >
-              Coming Soon
+              {t("nav.comingSoon")}
             </button>
           </div>
         </div>
 
-        <div className="home-movie-grid">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4 lg:gap-5">
           {movieList.map((movie) => (
-            <div className="home-movie-card" key={movie.title}>
-              <div className="home-movie-poster-wrap">
-                <img
-                  className="home-movie-poster"
-                  src={movie.poster}
-                  alt={movie.title}
-                  loading="lazy"
-                />
-                <span className="home-movie-rating">{movie.rating}</span>
-              </div>
-              <div className="home-movie-info">
-                <h3 className="home-movie-title">{movie.title}</h3>
-                <p className="home-movie-genre">{movie.genre}</p>
-                <p className="home-movie-date">Release: {movie.date}</p>
-                <div className="home-movie-actions">
-                  <button
-                    className="home-movie-btn play"
-                    onClick={() => navigate(`/watch/${encodeURIComponent(movie.title)}`)}
-                    title="Watch trailer"
-                  >
-                    <Play size={14} /> Watch
-                  </button>
-                  <button
-                    className="home-movie-btn"
-                    onClick={() => navigate(`/booking/${encodeURIComponent(movie.title)}`)}
-                  >
-                    Get Tickets
-                  </button>
-                </div>
-              </div>
-            </div>
+            <MovieCard key={movie.title} movie={movie} />
           ))}
         </div>
       </section>
@@ -215,97 +386,57 @@ export default function Home() {
       <span id="coming-soon" />
 
       {/* ===== CINEMAS ===== */}
-      <section className="home-section home-cinemas" id="cinemas">
-        <div className="home-section-head">
-          <h2 className="home-section-title">Our Cinemas</h2>
-          <p className="home-section-subtitle">
-            Conveniently located throughout Cambodia, near you.
-          </p>
-        </div>
-        <div className="home-cinema-grid">
-          {cinemas.map((cinema) => (
-            <div className="home-cinema-card" key={cinema.name}>
-              <img className="home-cinema-img" src={cinema.image} alt={cinema.name} />
-              <div className="home-cinema-overlay" />
-              <span className="home-cinema-tag">{cinema.area}</span>
-              <div className="home-cinema-content">
-                <h3 className="home-cinema-name">{cinema.name}</h3>
-                <p className="home-cinema-location">
-                  <MapPin size={14} /> {cinema.location}
-                </p>
-                <p className="home-cinema-seats">{cinema.seats}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ===== PROMOTIONS ===== */}
-      <section className="home-section" id="promotions">
-        <div className="home-section-head">
-          <h2 className="home-section-title">What's New?</h2>
-        </div>
-        <div className="home-promo-grid">
-          {promotions.map((promo) => (
-            <div className="home-promo-card" key={promo.title}>
-              {promo.isImage ? (
-                <img className="home-promo-icon-img" src={promo.icon} alt={promo.title} />
-              ) : (
-                <div className="home-promo-icon">
-                  <FontAwesomeIcon icon={promo.icon} />
-                </div>
-              )}
-              <span className="home-promo-tag">{promo.tag}</span>
-              <h3 className="home-promo-title">{promo.title}</h3>
-              <p className="home-promo-text">{promo.text}</p>
-              <a href="#" className="home-promo-link">
-                Learn More <ArrowRight size={14} />
-              </a>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ===== FOOTER ===== */}
-      <footer className="home-footer">
-        <div className="home-footer-inner">
-          <div className="home-footer-brand">
-            <div className="home-logo">
-              <span className="home-logo-icon"><Clapperboard size={26} /></span>
-              <span className="home-logo-text">KHMER <b>CINEMA</b></span>
-            </div>
-            <p className="home-footer-desc">
-              Your premier cinema destination in Cambodia. Book, watch, and enjoy.
-            </p>
+      <section className="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8 py-14 sm:py-16 md:py-20 scroll-mt-20" id="cinemas">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4 mb-7 sm:mb-8 md:mb-10">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold">{t("home.ourCinemas")}</h2>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+            <p className="text-xs sm:text-sm text-[var(--app-mute)]">{t("home.cinemasNote")}</p>
+            <button
+              onClick={() => navigate("/cinemas")}
+              className="inline-flex items-center gap-1 text-brand text-sm font-bold hover:underline cursor-pointer border-none bg-transparent p-0"
+            >
+              {t("home.viewAllCinemas")} →
+            </button>
           </div>
-          <div className="home-footer-col">
-            <h4 className="home-footer-heading">Quick Links</h4>
-            {navLinks.map((link) => (
-              <Link key={link.label} className="home-footer-link" to={link.to}>
-                {link.label}
-              </Link>
+        </div>
+        {dbCinemas.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
+            {dbCinemas.slice(0, 3).map((cinema) => (
+              <CinemaCard key={cinema.id} cinema={cinema} />
             ))}
           </div>
-          <div className="home-footer-col">
-            <h4 className="home-footer-heading">Account</h4>
-            <Link className="home-footer-link" to="/login">
-              Sign In
-            </Link>
-            <Link className="home-footer-link" to="/register">
-              Create Account
-            </Link>
-          </div>
-          <div className="home-footer-col">
-            <h4 className="home-footer-heading">Contact</h4>
-            <p className="home-footer-meta">info@khmercinema.com</p>
-            <p className="home-footer-meta">+855 23 000 000</p>
-            <p className="home-footer-meta">Phnom Penh, Cambodia</p>
+        )}
+      </section>
+
+      {/* ===== PROMOTION POSTER ===== */}
+      <section className="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8 pb-16 md:pb-20">
+        <div className="relative overflow-hidden rounded-3xl border border-[var(--app-edge)] min-h-[320px] sm:min-h-[360px] flex items-stretch">
+          <img
+            className="absolute inset-0 w-full h-full object-cover"
+            src="https://images.unsplash.com/photo-1574267432553-4b4628081c31?w=1400&h=700&fit=crop"
+            alt="50% off"
+            loading="lazy"
+          />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(13,13,13,0.95)_0%,rgba(13,13,13,0.7)_45%,rgba(13,13,13,0.25)_100%)]" />
+          <div className="relative z-10 flex flex-col items-start justify-center gap-4 p-8 sm:p-12 md:p-16 max-w-[560px]">
+            <span className="inline-flex items-center gap-2 bg-brand text-white text-[11px] font-bold uppercase tracking-[2px] px-3.5 py-1.5 rounded-full">
+              {t("home.promoPosterBadge")}
+            </span>
+            <h2 className="text-5xl sm:text-6xl md:text-7xl font-black leading-none tracking-tight text-white">
+              {t("home.promoPosterTitle")}
+            </h2>
+            <p className="text-sm sm:text-base text-white/80 leading-relaxed">
+              {t("home.promoPosterDesc")}
+            </p>
+            <button
+              onClick={() => navigate("/promotions")}
+              className="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-white text-sm font-bold px-7 py-3.5 rounded-full transition-all shadow-[0_4px_16px_rgba(229,9,20,0.35)] cursor-pointer border-none"
+            >
+              {t("home.promoPosterCta")} <span aria-hidden>→</span>
+            </button>
           </div>
         </div>
-        <div className="home-footer-bottom">
-          © 2026 Khmer Cinema. All rights reserved.
-        </div>
-      </footer>
-    </div>
+      </section>
+    </>
   );
 }
