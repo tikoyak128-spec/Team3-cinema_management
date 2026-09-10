@@ -19,6 +19,19 @@ class UserController extends Controller
         return response()->json($users);
     }
 
+    public function show(int $id): JsonResponse
+    {
+        $user = User::withCount('bookings')->find($id);
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'User not found',
+            ], 404);
+        }
+
+        return response()->json($user);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([

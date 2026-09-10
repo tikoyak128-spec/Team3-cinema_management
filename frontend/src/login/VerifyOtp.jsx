@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/client";
 import { ShieldCheck, ArrowLeft } from "lucide-react";
+import ThemeToggle from "../components/ThemeToggle";
 
 export default function VerifyOtp() {
   const navigate = useNavigate();
@@ -81,31 +82,32 @@ export default function VerifyOtp() {
   };
 
   return (
-    <div style={styles.loginContainer}>
-      <div style={styles.glowRed} />
-      <div style={styles.glowDark} />
+    <div className="[font-family:'Mulish','Kantumruy_Pro',-apple-system,BlinkMacSystemFont,'Segoe_UI',sans-serif] bg-[var(--app-page)] text-[var(--app-ink)] h-screen w-full flex items-center justify-center relative overflow-hidden p-5">
+      <div className="fixed top-5 right-5 z-[5]"><ThemeToggle /></div>
+      <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(229,9,20,0.35)_0%,rgba(5,5,5,0)_70%)] blur-[50px] z-[1]" />
+      <div className="absolute bottom-0 left-0 right-0 h-[200px] bg-gradient-to-t from-[var(--app-deep)] to-transparent z-[1]" />
 
-      <div style={styles.card}>
-        <div style={styles.brandLogo}>
-          <span style={styles.logoPrimary}>KHMER</span>
-          <span style={styles.logoSub}>CINEMA</span>
+      <div className="relative z-[2] w-full max-w-[420px] bg-[var(--app-panel)] border border-[var(--app-edge2)] rounded-[20px] py-9 px-[30px] shadow-[0_20px_40px_rgba(0,0,0,0.8)]">
+        <div className="text-center leading-none mb-5">
+          <span className="block text-[24px] font-black tracking-[3px] text-[var(--app-ink)]">KHMER</span>
+          <span className="text-[10px] tracking-[5px] text-[#e50914] font-bold">CINEMA</span>
         </div>
 
-        <div style={styles.iconWrap}>
+        <div className="flex justify-center mb-4">
           <ShieldCheck size={36} color="#e50914" />
         </div>
 
-        <h2 style={styles.title}>Verify Your Email</h2>
-        <p style={styles.subtitle}>
+        <h2 className="text-[22px] font-extrabold text-center mb-1">Verify Your Email</h2>
+        <p className="text-[13px] text-[var(--app-mute)] text-center mb-6 leading-[1.6]">
           We sent a 6-digit code to<br />
-          <strong style={{ color: "#ffffff" }}>{email}</strong>
+          <strong className="text-[var(--app-ink)]">{email}</strong>
         </p>
 
-        {error && <div style={styles.errorMsg}>{error}</div>}
-        {success && <div style={styles.successMsg}>{success}</div>}
+        {error && <div className="bg-[rgba(229,9,20,0.15)] border border-[rgba(229,9,20,0.4)] text-[#ff4d4d] text-[12px] font-semibold text-center p-[10px] rounded-[8px] mb-4">{error}</div>}
+        {success && <div className="bg-[rgba(34,197,94,0.15)] border border-[rgba(34,197,94,0.4)] text-[#22c55e] text-[12px] font-semibold text-center p-[10px] rounded-[8px] mb-4">{success}</div>}
 
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <div style={styles.otpRow} onPaste={handlePaste}>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-[18px]">
+          <div className="flex gap-[10px] justify-center" onPaste={handlePaste}>
             {otp.map((digit, i) => (
               <input
                 key={i}
@@ -116,33 +118,30 @@ export default function VerifyOtp() {
                 value={digit}
                 onChange={(e) => handleChange(i, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(i, e)}
-                style={{
-                  ...styles.otpInput,
-                  borderColor: digit ? "#e50914" : "#282828",
-                }}
+                className={`w-[48px] h-[56px] text-center text-[22px] font-bold bg-[var(--app-panel2)] rounded-[10px] text-[var(--app-ink)] outline-none transition-[border-color] duration-200 border ${digit ? "border-[#e50914]" : "border-[var(--app-edge2)]"}`}
               />
             ))}
           </div>
 
-          <button type="submit" style={styles.submitBtn} disabled={submitting}>
+          <button type="submit" className="bg-[#e50914] text-white border-none rounded-[10px] p-[14px] text-[14px] font-bold cursor-pointer mt-[10px] shadow-[0_4px_15px_rgba(229,9,20,0.4)] transition-[background] duration-200" disabled={submitting}>
             {submitting ? "Verifying..." : "Verify Email"}
           </button>
         </form>
 
-        <div style={styles.resendRow}>
-          <span style={styles.resendText}>Didn't receive the code?</span>
+        <div className="flex items-center justify-center gap-[6px] mt-5">
+          <span className="text-[13px] text-[var(--app-mute)]">Didn't receive the code?</span>
           <button
             type="button"
             onClick={handleResend}
             disabled={resending}
-            style={styles.resendBtn}
+            className="bg-transparent border-none text-[#e50914] text-[13px] font-bold cursor-pointer p-0"
           >
             {resending ? "Sending..." : "Resend Code"}
           </button>
         </div>
 
-        <div style={styles.footerText}>
-          <Link to="/register" style={styles.backLink}>
+        <div className="mt-6 text-center text-[13px] text-[var(--app-mute)]">
+          <Link to="/register" className="text-[var(--app-mute)] no-underline inline-flex items-center gap-1">
             <ArrowLeft size={14} /> Back to Register
           </Link>
         </div>
@@ -150,177 +149,3 @@ export default function VerifyOtp() {
     </div>
   );
 }
-
-const styles = {
-  loginContainer: {
-    backgroundColor: "#050505",
-    color: "#ffffff",
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-    height: "100vh",
-    width: "100%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-    overflow: "hidden",
-    padding: "20px",
-  },
-  glowRed: {
-    position: "absolute",
-    top: "20%",
-    left: "50%",
-    transform: "translateX(-50%)",
-    width: "450px",
-    height: "450px",
-    background: "radial-gradient(circle, rgba(229, 9, 20, 0.35) 0%, rgba(5,5,5,0) 70%)",
-    filter: "blur(50px)",
-    zIndex: 1,
-  },
-  glowDark: {
-    position: "absolute",
-    bottom: "0",
-    left: "0",
-    right: "0",
-    height: "200px",
-    background: "linear-gradient(to top, #000000, transparent)",
-    zIndex: 1,
-  },
-  card: {
-    position: "relative",
-    zIndex: 2,
-    width: "100%",
-    maxWidth: "420px",
-    backgroundColor: "#111111",
-    border: "1px solid #222222",
-    borderRadius: "20px",
-    padding: "36px 30px",
-    boxShadow: "0 20px 40px rgba(0, 0, 0, 0.8)",
-  },
-  brandLogo: {
-    textAlign: "center",
-    lineHeight: "1",
-    marginBottom: "20px",
-  },
-  logoPrimary: {
-    display: "block",
-    fontSize: "24px",
-    fontWeight: "900",
-    letterSpacing: "3px",
-    color: "#ffffff",
-  },
-  logoSub: {
-    fontSize: "10px",
-    letterSpacing: "5px",
-    color: "#e50914",
-    fontWeight: "700",
-  },
-  iconWrap: {
-    display: "flex",
-    justifyContent: "center",
-    marginBottom: "16px",
-  },
-  title: {
-    fontSize: "22px",
-    fontWeight: "800",
-    textAlign: "center",
-    marginBottom: "4px",
-  },
-  subtitle: {
-    fontSize: "13px",
-    color: "#777777",
-    textAlign: "center",
-    marginBottom: "24px",
-    lineHeight: "1.6",
-  },
-  errorMsg: {
-    backgroundColor: "rgba(229, 9, 20, 0.15)",
-    border: "1px solid rgba(229, 9, 20, 0.4)",
-    color: "#ff4d4d",
-    fontSize: "12px",
-    fontWeight: "600",
-    textAlign: "center",
-    padding: "10px",
-    borderRadius: "8px",
-    marginBottom: "16px",
-  },
-  successMsg: {
-    backgroundColor: "rgba(34, 197, 94, 0.15)",
-    border: "1px solid rgba(34, 197, 94, 0.4)",
-    color: "#22c55e",
-    fontSize: "12px",
-    fontWeight: "600",
-    textAlign: "center",
-    padding: "10px",
-    borderRadius: "8px",
-    marginBottom: "16px",
-  },
-  form: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "18px",
-  },
-  otpRow: {
-    display: "flex",
-    gap: "10px",
-    justifyContent: "center",
-  },
-  otpInput: {
-    width: "48px",
-    height: "56px",
-    textAlign: "center",
-    fontSize: "22px",
-    fontWeight: "700",
-    backgroundColor: "#181818",
-    border: "1px solid #282828",
-    borderRadius: "10px",
-    color: "#ffffff",
-    outline: "none",
-    transition: "border-color 0.2s",
-  },
-  submitBtn: {
-    backgroundColor: "#e50914",
-    color: "#ffffff",
-    border: "none",
-    borderRadius: "10px",
-    padding: "14px",
-    fontSize: "14px",
-    fontWeight: "700",
-    cursor: "pointer",
-    marginTop: "10px",
-    boxShadow: "0 4px 15px rgba(229, 9, 20, 0.4)",
-    transition: "background 0.2s",
-  },
-  resendRow: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "6px",
-    marginTop: "20px",
-  },
-  resendText: {
-    fontSize: "13px",
-    color: "#666666",
-  },
-  resendBtn: {
-    background: "none",
-    border: "none",
-    color: "#e50914",
-    fontSize: "13px",
-    fontWeight: "700",
-    cursor: "pointer",
-    padding: 0,
-  },
-  footerText: {
-    marginTop: "24px",
-    textAlign: "center",
-    fontSize: "13px",
-    color: "#666666",
-  },
-  backLink: {
-    color: "#aaaaaa",
-    textDecoration: "none",
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "4px",
-  },
-};

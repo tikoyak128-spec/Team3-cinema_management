@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             RoomSeeder::class,
             SeatSeeder::class,
             ShowtimeSeeder::class,
+            PromotionSeeder::class,
         ]);
     }
 }

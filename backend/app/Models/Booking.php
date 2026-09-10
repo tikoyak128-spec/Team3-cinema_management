@@ -11,8 +11,13 @@ class Booking extends Model
     protected $fillable = [
         'user_id',
         'showtime_id',
+        'booking_code',
         'total_amount',
         'status',
+        'payment_md5',
+        'payment_qr',
+        'payment_expires_at',
+        'paid_at',
     ];
 
     public function user(): BelongsTo

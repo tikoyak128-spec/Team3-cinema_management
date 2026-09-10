@@ -11,14 +11,14 @@ class SeatController extends Controller
 {
     public function index(): JsonResponse
     {
-        $seats = Seat::with('room')->get();
+        $seats = Seat::with('room.cinema')->get();
 
         return response()->json($seats);
     }
 
     public function show(int $id): JsonResponse
     {
-        $seat = Seat::with('room')->find($id);
+        $seat = Seat::with('room.cinema')->find($id);
 
         if (!$seat) {
             return response()->json([
@@ -32,16 +32,23 @@ class SeatController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'room_id' => [
+            'cinema_room_id' => [
                 'required',
                 'integer',
-                'exists:rooms,id'
+                'exists:cinema_rooms,id'
             ],
             'seat_number' => [
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('seats', 'seat_number')
+                Rule::unique('seats')->where(function ($query) use ($request) {
+                    return $query->where('cinema_room_id', $request->cinema_room_id);
+                })
+            ],
+            'row' => [
+                'nullable',
+                'string',
+                'max:255'
             ],
             'seat_type' => [
                 'required',
@@ -68,16 +75,23 @@ class SeatController extends Controller
         }
 
         $validated = $request->validate([
-            'room_id' => [
+            'cinema_room_id' => [
                 'sometimes',
                 'integer',
-                'exists:rooms,id'
+                'exists:cinema_rooms,id'
             ],
             'seat_number' => [
                 'sometimes',
                 'string',
                 'max:255',
-                Rule::unique('seats', 'seat_number')->ignore($seat->id)
+                Rule::unique('seats')->ignore($seat->id)->where(function ($query) use ($request, $seat) {
+                    return $query->where('cinema_room_id', $request->input('cinema_room_id', $seat->cinema_room_id));
+                })
+            ],
+            'row' => [
+                'nullable',
+                'string',
+                'max:255'
             ],
             'seat_type' => [
                 'sometimes',

@@ -8,6 +8,8 @@ use App\Models\Movie;
 
 class Category extends Model
 {
+    protected $table = 'movie_categories';
+
     protected $fillable = [
         'name',
         'description',
@@ -15,6 +17,6 @@ class Category extends Model
 
     public function movies(): HasMany
     {
-        return $this->hasMany(Movie::class);
+        return $this->hasMany(Movie::class, 'movie_category_id');
     }
 }

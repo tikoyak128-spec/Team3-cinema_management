@@ -1,4 +1,3 @@
-import "./staff.css";
 import { CircleCheck, Clock, Ticket, Users, Wallet } from "lucide-react";
 
 const stats = [
@@ -16,43 +15,41 @@ const recentBookings = [
 
 export default function Dashboard() {
   const statusBadge = (s) =>
-    s === "Confirmed" ? "kc-badge-green" : "kc-badge-yellow";
+    s === "Confirmed"
+      ? "bg-[rgba(22,163,74,0.14)] text-[#22c55e] border border-[rgba(34,197,94,0.3)]"
+      : "bg-[rgba(234,179,8,0.14)] text-[#eab308] border border-[rgba(234,179,8,0.3)]";
 
   return (
-    <div className="kc-page">
-      <div className="kc-head">
+    <div className="flex flex-col gap-6 text-[var(--app-ink)]">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1>Staff Dashboard</h1>
-          <p className="kc-subtitle">Today's overview and recent bookings.</p>
+          <h1 className="text-[26px] font-extrabold">Staff Dashboard</h1>
+          <p className="text-sm text-[var(--app-mute)] mt-1">Today's overview and recent bookings.</p>
         </div>
       </div>
 
-      <div className="kc-stats">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] max-[640px]:grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-5">
         {stats.map((s) => (
-          <div className="kc-stat" key={s.label}>
-            <span className="kc-stat-icon"><s.icon size={22} /></span>
-            <div className="kc-stat-label">{s.label}</div>
-            <div className="kc-stat-value" style={{ color: s.color }}>{s.value}</div>
+          <div className="bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-2xl p-[22px] transition-all duration-200 hover:-translate-y-[3px] hover:border-[rgba(229,9,20,0.4)]" key={s.label}>
+            <span className="text-[26px] float-right opacity-80"><s.icon size={22} /></span>
+            <div className="text-[13px] text-[var(--app-mute)] font-semibold">{s.label}</div>
+            <div className="text-[32px] font-extrabold mt-1.5 text-[var(--c)]" style={{ "--c": s.color }}>{s.value}</div>
           </div>
         ))}
       </div>
 
-      <div className="kc-card">
-        <h2 style={{ fontSize: "18px", fontWeight: 800, marginBottom: "18px" }}>Recent Bookings</h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      <div className="bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-2xl p-6">
+        <h2 className="text-lg font-extrabold mb-[18px]">Recent Bookings</h2>
+        <div className="flex flex-col gap-3">
           {recentBookings.map((b, i) => (
-            <div key={i} style={{
-              display: "flex", justifyContent: "space-between", alignItems: "center",
-              padding: "16px", background: "#181818", borderRadius: "12px", border: "1px solid #272727",
-              flexWrap: "wrap", gap: "12px"
-            }}>
+            <div key={i} className="flex justify-between items-center p-4 bg-[var(--app-panel2)] rounded-xl border border-[var(--app-edge)] flex-wrap gap-3">
               <div>
-                <div style={{ fontWeight: 700, fontSize: "15px" }}>{b.customer}</div>
-                <div style={{ fontSize: "13px", color: "#a0a0a0", marginTop: "4px" }}>
+                <div className="font-bold text-[15px]">{b.customer}</div>
+                <div className="text-[13px] text-[var(--app-mute)] mt-1">
                   {b.movie} · {b.seats.join(", ")} · <Clock size={13} /> {b.time}
                 </div>
               </div>
-              <span className={`kc-badge ${statusBadge(b.status)}`}>{b.status}</span>
+              <span className={`inline-flex items-center gap-1.5 px-3 py-[5px] text-xs font-bold rounded-[20px] whitespace-nowrap ${statusBadge(b.status)}`}>{b.status}</span>
             </div>
           ))}
         </div>

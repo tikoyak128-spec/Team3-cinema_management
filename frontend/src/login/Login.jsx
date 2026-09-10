@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/client";
-import { Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
+import AuthShell from "./AuthShell";
+import { usePrefs } from "../context/PrefsContext";
 
 function getRoleFromEmail(email = "") {
   const e = email.trim().toLowerCase();
@@ -11,8 +13,12 @@ function getRoleFromEmail(email = "") {
   return "customer";
 }
 
+const inputClass =
+  "w-full bg-[var(--app-panel2)] border border-[var(--app-edge2)] rounded-[12px] py-3 pl-[42px] pr-[42px] text-[var(--app-ink)] text-[13px] placeholder:text-[var(--app-mute)] outline-none transition-all duration-200 hover:border-[var(--app-edge2)] focus:border-brand focus:ring-[3px] focus:ring-brand/15 focus:bg-[var(--app-panel)]";
+
 export default function CinemaLogin() {
   const navigate = useNavigate();
+  const { t } = usePrefs();
   const [searchParams, setSearchParams] = useSearchParams();
   const { login, loginWithToken } = useAuth();
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -44,9 +50,9 @@ export default function CinemaLogin() {
         goAfterLogin(data.user.role);
         return;
       }
-      errorMessage = "Something went wrong during Google sign in.";
+      errorMessage = t("auth.googleError");
     } catch {
-      errorMessage = "Something went wrong during Google sign in.";
+      errorMessage = t("auth.googleError");
     }
 
     if (errorMessage) {
@@ -75,7 +81,7 @@ export default function CinemaLogin() {
 
     const email = formData.email.trim();
     if (!email || !formData.password) {
-      setError("Please enter your email and password.");
+      setError(t("auth.fillCredentials"));
       return;
     }
 
@@ -92,7 +98,7 @@ export default function CinemaLogin() {
         goAfterLogin(data.user.role || getRoleFromEmail(email));
         return;
       }
-      setError("Invalid credentials. Please check your email and password.");
+      setError(t("auth.invalidCredentials"));
     } catch (err) {
       const resp = err?.response?.data;
       if (resp?.requires_verification) {
@@ -101,7 +107,7 @@ export default function CinemaLogin() {
       }
       setError(
         err?.response?.data?.message ||
-          "Invalid credentials. Please check your email and password."
+          t("auth.invalidCredentials")
       );
     } finally {
       setSubmitting(false);
@@ -109,307 +115,117 @@ export default function CinemaLogin() {
   };
 
   return (
-    <div style={styles.loginContainer}>
-      <div style={styles.glowRed} />
-      <div style={styles.glowDark} />
-
-      <div style={styles.card}>
-        <div style={styles.brandLogo}>
-          <span style={styles.logoPrimary}>KHMER</span>
-          <span style={styles.logoSub}>CINEMA</span>
+    <AuthShell title={t("auth.welcomeBack")} subtitle={t("auth.signInSubtitle")}>
+      {error && (
+        <div className="flex items-start gap-2 bg-[rgba(229,9,20,0.12)] border border-[rgba(229,9,20,0.35)] text-[#f87171] text-[12px] font-semibold p-[11px] px-3.5 rounded-[10px] mb-5 animate-[scaleIn_0.25s_ease_both]">
+          <span className="mt-[1px] shrink-0">⚠</span>
+          <span>{error}</span>
         </div>
+      )}
 
-        <h2 style={styles.title}>Welcome Back</h2>
-        <p style={styles.subtitle}>Sign in to your account to continue</p>
-
-        {error && <div style={styles.errorMsg}>{error}</div>}
-
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>Email Address</label>
-            <div style={styles.inputWrapper}>
-              <span style={styles.inputIcon}><Mail size={16} /></span>
-              <input
-                type="email"
-                name="email"
-                placeholder="you@example.com"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                style={styles.input}
-              />
-            </div>
-            <span style={styles.hint}>
-              Use an email containing "admin" or "staff" to access their portal.
+      <form onSubmit={handleSubmit} className="flex flex-col gap-[18px]">
+        <div className="flex flex-col gap-[7px]">
+          <label className="text-[12px] font-bold text-[var(--app-ink2)]">{t("auth.emailAddress")}</label>
+          <div className="relative flex items-center">
+            <span className="absolute left-[14px] text-[var(--app-mute)] pointer-events-none">
+              <Mail size={16} />
             </span>
+            <input
+              type="email"
+              name="email"
+              placeholder={t("auth.emailPlaceholder")}
+              value={formData.email}
+              onChange={handleChange}
+              required
+              autoComplete="email"
+              className={inputClass}
+            />
           </div>
-
-          <div style={styles.inputGroup}>
-            <div style={styles.labelRow}>
-              <label style={styles.label}>Password</label>
-              <Link to="/forgot-password" style={styles.forgotLink}>
-                Forgot?
-              </Link>
-            </div>
-            <div style={styles.inputWrapper}>
-              <span style={styles.inputIcon}><Lock size={16} /></span>
-              <input
-                type={showPassword ? "text" : "password"}
-                name="password"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                style={styles.input}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                style={styles.eyeBtn}
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-          </div>
-
-          <button type="submit" style={styles.submitBtn} disabled={submitting}>
-            {submitting ? "Signing in..." : "Sign In"}
-          </button>
-        </form>
-
-        <div style={styles.dividerRow}>
-          <span style={styles.dividerLine} />
-          <span style={styles.dividerText}>or</span>
-          <span style={styles.dividerLine} />
         </div>
 
-        <button type="button" onClick={handleGoogle} style={styles.googleBtn}>
-          <svg width="18" height="18" viewBox="0 0 48 48" style={styles.googleIcon}>
-            <path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.2 29.4 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/>
-            <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.2 29.4 4 24 4 16.3 4 9.6 8.3 6.3 14.7z"/>
-            <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.3 44 24 44z"/>
-            <path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4 5.5l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/>
-          </svg>
-          Sign in with Google
+        <div className="flex flex-col gap-[7px]">
+          <div className="flex justify-between items-center">
+            <label className="text-[12px] font-bold text-[var(--app-ink2)]">{t("auth.password")}</label>
+            <Link
+              to="/forgot-password"
+              className="text-[12px] font-bold text-brand no-underline hover:underline"
+            >
+              {t("auth.forgotPassword")}
+            </Link>
+          </div>
+          <div className="relative flex items-center">
+            <span className="absolute left-[14px] text-[var(--app-mute)] pointer-events-none">
+              <Lock size={16} />
+            </span>
+            <input
+              type={showPassword ? "text" : "password"}
+              name="password"
+              placeholder="••••••••"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              autoComplete="current-password"
+              className={inputClass}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 text-[var(--app-mute)] hover:text-[var(--app-ink)] transition-colors cursor-pointer"
+              aria-label={showPassword ? t("auth.hidePasswordBtn") : t("auth.showPasswordBtn")}
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={submitting}
+          className="group relative mt-1 w-full bg-brand text-white border-none rounded-[12px] p-[14px] text-[14px] font-bold cursor-pointer flex items-center justify-center gap-2 shadow-[0_10px_26px_-8px_rgba(229,9,20,0.6)] transition-all duration-200 hover:bg-brand-hover hover:-translate-y-px active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+        >
+          {submitting ? (
+            <>
+              <Loader2 size={17} className="animate-spin" /> {t("auth.signingIn")}
+            </>
+          ) : (
+            <>
+              {t("auth.signIn")}
+              <ArrowRight size={17} className="transition-transform duration-200 group-hover:translate-x-0.5" />
+            </>
+          )}
         </button>
+      </form>
 
-        <div style={styles.footerText}>
-          Don't have an account?{" "}
-          <Link to="/register" style={styles.registerLink}>
-            Create Account
-          </Link>
-        </div>
+      <div className="flex items-center gap-4 my-6">
+        <span className="flex-1 h-px bg-[var(--app-edge2)]" />
+        <span className="text-[11px] text-[var(--app-mute)] uppercase tracking-[1.5px] font-bold">{t("auth.orContinueWith")}</span>
+        <span className="flex-1 h-px bg-[var(--app-edge2)]" />
       </div>
-    </div>
+
+      <button
+        type="button"
+        onClick={handleGoogle}
+        className="flex items-center justify-center gap-[10px] w-full bg-[var(--app-panel2)] text-[var(--app-ink)] border border-[var(--app-edge2)] rounded-[12px] p-[13px] text-[14px] font-semibold cursor-pointer transition-all duration-200 hover:border-brand/50 hover:bg-[var(--app-fill)]"
+      >
+        <svg width="18" height="18" viewBox="0 0 48 48" className="shrink-0">
+          <path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.2 29.4 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/>
+          <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.2 29.4 4 24 4 16.3 4 9.6 8.3 6.3 14.7z"/>
+          <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.3 44 24 44z"/>
+          <path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4 5.5l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/>
+        </svg>
+        {t("auth.signInWithGoogle")}
+      </button>
+
+      <p className="mt-6 text-center text-[12px] text-[var(--app-mute)]">
+        {t("auth.noAccount")}{" "}
+        <Link to="/register" className="text-brand font-bold no-underline hover:underline">
+          {t("auth.createAccount")}
+        </Link>
+      </p>
+
+      <p className="mt-5 text-center text-[11px] text-[var(--app-mute)] leading-relaxed">
+        {t("auth.demoHint")}
+      </p>
+    </AuthShell>
   );
 }
-
-const styles = {
-  loginContainer: {
-    backgroundColor: "#050505",
-    color: "#ffffff",
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-    height: "100vh",
-    width: "100%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-    overflow: "hidden",
-    padding: "20px",
-  },
-  glowRed: {
-    position: "absolute",
-    top: "20%",
-    left: "50%",
-    transform: "translateX(-50%)",
-    width: "450px",
-    height: "450px",
-    background: "radial-gradient(circle, rgba(229, 9, 20, 0.35) 0%, rgba(5,5,5,0) 70%)",
-    filter: "blur(50px)",
-    zIndex: 1,
-  },
-  glowDark: {
-    position: "absolute",
-    bottom: "0",
-    left: "0",
-    right: "0",
-    height: "200px",
-    background: "linear-gradient(to top, #000000, transparent)",
-    zIndex: 1,
-  },
-  card: {
-    position: "relative",
-    zIndex: 2,
-    width: "100%",
-    maxWidth: "420px",
-    backgroundColor: "#111111",
-    border: "1px solid #222222",
-    borderRadius: "20px",
-    padding: "36px 30px",
-    boxShadow: "0 20px 40px rgba(0, 0, 0, 0.8)",
-  },
-  brandLogo: {
-    textAlign: "center",
-    lineHeight: "1",
-    marginBottom: "24px",
-  },
-  logoPrimary: {
-    display: "block",
-    fontSize: "24px",
-    fontWeight: "900",
-    letterSpacing: "3px",
-    color: "#ffffff",
-  },
-  logoSub: {
-    fontSize: "10px",
-    letterSpacing: "5px",
-    color: "#e50914",
-    fontWeight: "700",
-  },
-  title: {
-    fontSize: "22px",
-    fontWeight: "800",
-    textAlign: "center",
-    marginBottom: "4px",
-  },
-  subtitle: {
-    fontSize: "13px",
-    color: "#777777",
-    textAlign: "center",
-    marginBottom: "24px",
-  },
-  errorMsg: {
-    backgroundColor: "rgba(229, 9, 20, 0.15)",
-    border: "1px solid rgba(229, 9, 20, 0.4)",
-    color: "#ff4d4d",
-    fontSize: "12px",
-    fontWeight: "600",
-    textAlign: "center",
-    padding: "10px",
-    borderRadius: "8px",
-    marginBottom: "16px",
-  },
-  form: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "18px",
-  },
-  inputGroup: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "6px",
-  },
-  labelRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  label: {
-    fontSize: "12px",
-    fontWeight: "600",
-    color: "#aaaaaa",
-  },
-  hint: {
-    fontSize: "11px",
-    color: "#666666",
-    lineHeight: "1.4",
-  },
-  forgotLink: {
-    fontSize: "12px",
-    color: "#e50914",
-    textDecoration: "none",
-  },
-  inputWrapper: {
-    position: "relative",
-    display: "flex",
-    alignItems: "center",
-  },
-  inputIcon: {
-    position: "absolute",
-    left: "14px",
-    fontSize: "14px",
-    pointerEvents: "none",
-  },
-  input: {
-    width: "100%",
-    backgroundColor: "#181818",
-    border: "1px solid #282828",
-    borderRadius: "10px",
-    padding: "12px 14px 12px 40px",
-    color: "#ffffff",
-    fontSize: "13px",
-    outline: "none",
-    transition: "border-color 0.2s",
-  },
-  eyeBtn: {
-    position: "absolute",
-    right: "12px",
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    fontSize: "14px",
-  },
-  submitBtn: {
-    backgroundColor: "#e50914",
-    color: "#ffffff",
-    border: "none",
-    borderRadius: "10px",
-    padding: "14px",
-    fontSize: "14px",
-    fontWeight: "700",
-    cursor: "pointer",
-    marginTop: "10px",
-    boxShadow: "0 4px 15px rgba(229, 9, 20, 0.4)",
-    transition: "background 0.2s",
-  },
-  dividerRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    margin: "20px 0 4px",
-  },
-  dividerLine: {
-    flex: 1,
-    height: "1px",
-    backgroundColor: "#2a2a2a",
-  },
-  dividerText: {
-    fontSize: "12px",
-    color: "#777777",
-    textTransform: "uppercase",
-    letterSpacing: "1px",
-  },
-  googleBtn: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "10px",
-    width: "100%",
-    backgroundColor: "#ffffff",
-    color: "#1a1a1a",
-    border: "1px solid #2a2a2a",
-    borderRadius: "10px",
-    padding: "12px",
-    fontSize: "14px",
-    fontWeight: "600",
-    cursor: "pointer",
-    marginTop: "12px",
-    transition: "background 0.2s, border-color 0.2s",
-  },
-  googleIcon: {
-    flexShrink: 0,
-  },
-  footerText: {
-    marginTop: "24px",
-    textAlign: "center",
-    fontSize: "13px",
-    color: "#666666",
-  },
-  registerLink: {
-    color: "#ffffff",
-    fontWeight: "700",
-    textDecoration: "none",
-    marginLeft: "4px",
-  },
-};

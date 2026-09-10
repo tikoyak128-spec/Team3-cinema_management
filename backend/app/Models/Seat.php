@@ -7,16 +7,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Seat extends Model
 {
-    public $timestamps = false;
-
     protected $fillable = [
-        'room_id',
+        'cinema_room_id',
         'seat_number',
+        'row',
         'seat_type',
     ];
 
     public function room(): BelongsTo
     {
-        return $this->belongsTo(Room::class);
+        return $this->belongsTo(Room::class, 'cinema_room_id');
     }
 }

@@ -1,19 +1,153 @@
-*,
-*::before,
-*::after {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+@import url("https://fonts.googleapis.com/css2?family=Kantumruy+Pro:ital,wght@0,100..700;1,100..700&family=Inter:wght@400;500;600;700;800&display=swap");
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-brand: #e50914;
+  --color-brand-hover: #f40612;
+  --color-dark: #050505;
+  --color-dark-card: #111111;
+  --color-dark-border: #1f1f1f;
+  --color-muted: #a0a0a0;
 }
 
-html, body, #root {
-  width: 100%;
-  height: 100%;
-  min-height: 100vh;
-  overflow-x: hidden;
+html {
+  font-family: "Inter", "Kantumruy Pro", system-ui, -apple-system, "Segoe UI", Roboto, "Khmer OS", sans-serif;
 }
 
 body {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  font-family: "Inter", "Kantumruy Pro", system-ui, -apple-system, "Segoe UI", Roboto, "Khmer OS", sans-serif;
+}
+
+:root {
+  --app-page: #f4f5f7;
+  --app-deep: #eceef2;
+  --app-panel: #ffffff;
+  --app-panel2: #f1f3f6;
+  --app-edge: #e2e5ea;
+  --app-edge2: #ccd1d8;
+  --app-ink: #16181d;
+  --app-ink2: #454b54;
+  --app-mute: #7d838d;
+  --app-fill: rgba(0, 0, 0, 0.05);
+  --app-fill2: rgba(0, 0, 0, 0.1);
+  --app-bar: rgba(248, 249, 251, 0.92);
+  --app-header: rgba(248, 249, 251, 0.85);
+}
+
+.dark {
+  --app-page: #050505;
+  --app-deep: #0a0a0a;
+  --app-panel: #111111;
+  --app-panel2: #161616;
+  --app-edge: #1f1f1f;
+  --app-edge2: #2a2a2a;
+  --app-ink: #ffffff;
+  --app-ink2: #e0e0e0;
+  --app-mute: #a0a0a0;
+  --app-fill: rgba(255, 255, 255, 0.06);
+  --app-fill2: rgba(255, 255, 255, 0.11);
+  --app-bar: rgba(11, 11, 11, 0.95);
+  --app-header: rgba(5, 5, 5, 0.85);
+}
+
+@layer base {
+  @keyframes heroZoom {
+    0% { transform: scale(1); }
+    100% { transform: scale(1.08); }
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  *,
+  *::before,
+  *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html, #root {
+    width: 100%;
+    height: 100%;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  html {
+    background-color: var(--app-page);
+    color: var(--app-ink);
+    color-scheme: light;
+  }
+
+  .dark {
+    color-scheme: dark;
+  }
+
+  body {
+    font-family: 'Mulish', 'Kantumruy Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  ::selection {
+    background: rgba(229, 9, 20, 0.35);
+    color: #fff;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--app-deep);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--app-edge2);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--app-mute);
+  }
+
+  @supports (padding-top: env(safe-area-inset-top)) {
+    header {
+      padding-top: env(safe-area-inset-top);
+    }
+    footer {
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+  }
 }

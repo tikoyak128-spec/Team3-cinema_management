@@ -1,3 +1,5 @@
+import { useTheme } from "../../../../context/ThemeContext";
+
 export function AreaChart({
   labels,
   values,
@@ -7,6 +9,9 @@ export function AreaChart({
   gradientId = "an-area-grad",
   format = (v) => `${v.toFixed(1)}k`,
 }) {
+  const { theme } = useTheme();
+  const gridStroke = theme === "dark" ? "#242424" : "#e2e5ea";
+  const axisColor = theme === "dark" ? "#7a7a7a" : "#7d838d";
   const padX = 44;
   const padTop = 18;
   const padBottom = 30;
@@ -30,7 +35,7 @@ export function AreaChart({
 
   return (
     <svg
-      className="an-chart"
+      className="w-full h-auto block"
       viewBox={`0 0 ${width} ${height}`}
       role="img"
       aria-label="Chart"
@@ -51,10 +56,10 @@ export function AreaChart({
               x2={width - 12}
               y1={y}
               y2={y}
-              stroke="#242424"
+              stroke={gridStroke}
               strokeDasharray="4 6"
             />
-            <text x={padX - 10} y={y + 4} textAnchor="end" className="an-chart-axis">
+            <text x={padX - 10} y={y + 4} textAnchor="end" style={{ fill: axisColor }} className="text-[11px]">
               {format(max * g)}
             </text>
           </g>
@@ -84,7 +89,7 @@ export function AreaChart({
       {labels.map((lb, i) => {
         const x = padX + i * stepX;
         return (
-          <text key={lb} x={x} y={height - 8} textAnchor="middle" className="an-chart-axis">
+          <text key={lb} x={x} y={height - 8} textAnchor="middle" style={{ fill: axisColor }} className="text-[11px]">
             {lb}
           </text>
         );
@@ -101,6 +106,9 @@ export function BarChart({
   barColor = "#e50914",
   format = (v) => `${v}`,
 }) {
+  const { theme } = useTheme();
+  const gridStroke = theme === "dark" ? "#242424" : "#e2e5ea";
+  const axisColor = theme === "dark" ? "#7a7a7a" : "#7d838d";
   const padX = 40;
   const padTop = 14;
   const padBottom = 28;
@@ -114,7 +122,7 @@ export function BarChart({
 
   return (
     <svg
-      className="an-chart"
+      className="w-full h-auto block"
       viewBox={`0 0 ${width} ${height}`}
       role="img"
       aria-label="Bar chart"
@@ -128,10 +136,10 @@ export function BarChart({
               x2={width - 12}
               y1={y}
               y2={y}
-              stroke="#242424"
+              stroke={gridStroke}
               strokeDasharray="4 6"
             />
-            <text x={padX - 10} y={y + 4} textAnchor="end" className="an-chart-axis">
+            <text x={padX - 10} y={y + 4} textAnchor="end" style={{ fill: axisColor }} className="text-[11px]">
               {format(max * g)}
             </text>
           </g>
@@ -159,7 +167,7 @@ export function BarChart({
       {labels.map((lb, i) => {
         const x = padX + i * slot + slot / 2;
         return (
-          <text key={lb} x={x} y={height - 8} textAnchor="middle" className="an-chart-axis">
+          <text key={lb} x={x} y={height - 8} textAnchor="middle" style={{ fill: axisColor }} className="text-[11px]">
             {lb}
           </text>
         );
@@ -175,6 +183,8 @@ export function DonutChart({
   centerValue,
   centerLabel = "Total",
 }) {
+  const { theme } = useTheme();
+  const trackColor = theme === "dark" ? "#1c1c1c" : "#eceef2";
   const total = data.reduce((sum, d) => sum + d.value, 0);
   const r = (size - thickness) / 2;
   const c = 2 * Math.PI * r;
@@ -188,14 +198,14 @@ export function DonutChart({
   }, []);
 
   return (
-    <div className="an-donut-wrap" style={{ width: size, height: size }}>
+    <div className="relative shrink-0 h-[var(--sz)] w-[var(--sz)]" style={{ "--sz": size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         <circle
           cx={size / 2}
           cy={size / 2}
           r={r}
           fill="none"
-          stroke="#1c1c1c"
+          stroke={trackColor}
           strokeWidth={thickness}
         />
         {slices.map((d) => (
@@ -214,9 +224,9 @@ export function DonutChart({
           />
         ))}
       </svg>
-      <div className="an-donut-center">
-        <div className="an-donut-value">{centerValue ?? total.toLocaleString()}</div>
-        <div className="an-donut-label">{centerLabel}</div>
+      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+        <div className="text-[22px] font-extrabold">{centerValue ?? total.toLocaleString()}</div>
+        <div className="text-[12px] text-[var(--app-mute)]">{centerLabel}</div>
       </div>
     </div>
   );

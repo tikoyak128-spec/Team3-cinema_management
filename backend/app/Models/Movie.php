@@ -9,17 +9,19 @@ use App\Models\Category;
 class Movie extends Model
 {
     protected $fillable = [
-        'category_id',
+        'movie_category_id',
         'title',
         'description',
         'duration',
         'release_date',
-        'poster_url',
+        'poster',
         'trailer_url',
+        'rating',
+        'status',
     ];
 
     public function category(): BelongsTo
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsTo(Category::class, 'movie_category_id');
     }
 }
