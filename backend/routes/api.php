@@ -6,6 +6,7 @@ use App\Http\Controllers\BookingController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CinemaController;
 use App\Http\Controllers\MovieController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\SeatController;
 use App\Http\Controllers\ShowtimeController;
@@ -48,3 +49,5 @@ Route::apiResource('bookings', BookingController::class)->only(['index', 'store'
 
 Route::get('tickets/{ticket}', [TicketController::class, 'show']);
 Route::post('tickets/{ticket}/check-in', [TicketController::class, 'checkIn']);
+
+Route::get('reports', [ReportController::class, 'index']);

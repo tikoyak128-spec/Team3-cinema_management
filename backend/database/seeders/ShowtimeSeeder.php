@@ -7,34 +7,82 @@ use Illuminate\Support\Facades\DB;
 
 class ShowtimeSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        $showtimes = [
-            ['movie_title' => 'John Wick: Chapter 4', 'room_name' => 'Room 1', 'start_time' => '2026-09-10 10:00:00', 'end_time' => '2026-09-10 12:49:00', 'price' => 12.50],
-            ['movie_title' => 'Deadpool & Wolverine', 'room_name' => 'Room 1', 'start_time' => '2026-09-10 14:00:00', 'end_time' => '2026-09-10 16:08:00', 'price' => 14.00],
-            ['movie_title' => 'The Conjuring: Last Rites', 'room_name' => 'Room 1', 'start_time' => '2026-09-10 18:30:00', 'end_time' => '2026-09-10 20:22:00', 'price' => 13.00],
-            ['movie_title' => 'John Wick: Chapter 4', 'room_name' => 'Room 1', 'start_time' => '2026-09-11 10:00:00', 'end_time' => '2026-09-11 12:49:00', 'price' => 12.50],
+        DB::table('showtimes')->delete();
 
-            ['movie_title' => 'Bad Boys: Ride or Die', 'room_name' => 'Room 2', 'start_time' => '2026-09-10 11:00:00', 'end_time' => '2026-09-10 12:55:00', 'price' => 11.00],
-            ['movie_title' => 'Furiosa: A Mad Max Saga', 'room_name' => 'Room 2', 'start_time' => '2026-09-10 14:30:00', 'end_time' => '2026-09-10 16:58:00', 'price' => 13.50],
-            ['movie_title' => 'Deadpool & Wolverine', 'room_name' => 'Room 2', 'start_time' => '2026-09-10 19:00:00', 'end_time' => '2026-09-10 21:08:00', 'price' => 15.00],
-            ['movie_title' => 'The Conjuring: Last Rites', 'room_name' => 'Room 2', 'start_time' => '2026-09-11 11:00:00', 'end_time' => '2026-09-11 12:52:00', 'price' => 12.00],
+        $movies = DB::table('movies')->get(['id', 'duration'])->toArray();
+        $rooms = DB::table('rooms')->orderBy('id')->get(['id', 'name'])->toArray();
 
-            ['movie_title' => 'Furiosa: A Mad Max Saga', 'room_name' => 'Room 3', 'start_time' => '2026-09-10 13:00:00', 'end_time' => '2026-09-10 15:28:00', 'price' => 13.50],
-            ['movie_title' => 'Bad Boys: Ride or Die', 'room_name' => 'Room 3', 'start_time' => '2026-09-10 20:00:00', 'end_time' => '2026-09-10 21:55:00', 'price' => 11.00],
+        if (count($movies) === 0 || count($rooms) === 0) {
+            return;
+        }
+
+        $timeSlots = [
+            ['time' => '09:00', 'price_multiplier' => 1.0],
+            ['time' => '11:30', 'price_multiplier' => 1.0],
+            ['time' => '14:00', 'price_multiplier' => 1.1],
+            ['time' => '16:30', 'price_multiplier' => 1.2],
+            ['time' => '19:00', 'price_multiplier' => 1.35],
+            ['time' => '21:30', 'price_multiplier' => 1.5],
         ];
 
-        foreach ($showtimes as $showtime) {
-            $movieId = DB::table('movies')->where('title', $showtime['movie_title'])->value('id');
-            $roomId = DB::table('rooms')->where('name', $showtime['room_name'])->value('id');
+        $roomPricingKeywords = [
+            'IMAX' => 18.00,
+            'Dolby' => 20.00,
+            'iSense' => 17.00,
+            'Starium' => 16.00,
+            'Sweetbox' => 15.00,
+            'VIP' => 16.00,
+            'XD' => 17.00,
+        ];
 
-            DB::table('showtimes')->updateOrInsert(
-                ['movie_id' => $movieId, 'room_id' => $roomId, 'start_time' => $showtime['start_time']],
-                ['end_time' => $showtime['end_time'], 'price' => $showtime['price'], 'created_at' => now(), 'updated_at' => now()]
-            );
+        $movieCount = count($movies);
+        $roomCount = count($rooms);
+        $showtimesPerDay = [7, 8, 7, 8, 7, 8, 5];
+
+        $totalInserted = 0;
+        $movieIndex = 0;
+        $roomIndex = 0;
+
+        for ($day = 0; $day < count($showtimesPerDay) && $totalInserted < 50; $day++) {
+            $date = now()->addDays($day)->format('Y-m-d');
+            $slotsToday = $timeSlots;
+
+            for ($s = 0; $s < $showtimesPerDay[$day] && $totalInserted < 50; $s++) {
+                $slot = $slotsToday[$s % count($slotsToday)];
+                $movie = $movies[$movieIndex % $movieCount];
+                $room = $rooms[$roomIndex % $roomCount];
+
+                $basePrice = 11.50;
+                foreach ($roomPricingKeywords as $keyword => $premiumPrice) {
+                    if (str_contains($room->name, $keyword)) {
+                        $basePrice = $premiumPrice;
+                        break;
+                    }
+                }
+                $price = round($basePrice * $slot['price_multiplier'], 2);
+
+                $startDateTime = $date . ' ' . $slot['time'];
+                $endDateTime = date(
+                    'Y-m-d H:i:s',
+                    strtotime($startDateTime) + (int) $movie->duration * 60
+                );
+
+                DB::table('showtimes')->insert([
+                    'movie_id' => $movie->id,
+                    'room_id' => $room->id,
+                    'start_time' => $startDateTime,
+                    'end_time' => $endDateTime,
+                    'price' => $price,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                $totalInserted++;
+                $movieIndex++;
+                $roomIndex++;
+            }
         }
     }
 }

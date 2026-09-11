@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   CalendarDays,
   Download,
@@ -7,39 +7,135 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
+import api from "../../../../api/client";
 import { AreaChart, BarChart } from "./charts";
 import "../admin.css";
 import "./analytics.css";
 
 const periods = ["Last 7 days", "Last 30 days", "Last quarter", "This year"];
-
-const dailyRevenue = {
-  labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-  values: [4120, 5380, 4890, 6230, 7410, 8690, 9820],
+const hasErrors = (data) =>
+  !data ||
+  !data.summary ||
+  !Array.isArray(data.sales_summary) ||
+  (data.revenue_trend && !Array.isArray(data.revenue_trend.values)) ||
+  (data.occupancy_by_month && !Array.isArray(data.occupancy_by_month.values));
+const periodParams = {
+  "Last 7 days": "7",
+  "Last 30 days": "30",
+  "Last quarter": "quarter",
+  "This year": "year",
 };
 
-const occupancyByCinema = {
-  labels: ["J", "F", "M", "A", "M", "J"],
-  values: [58, 64, 61, 71, 69, 78],
-};
-
-const summary = [
-  { label: "Total Revenue", value: "$46,540", icon: Wallet, color: "#22c55e", sub: "+11.2% vs previous" },
-  { label: "Total Bookings", value: "1,181", icon: Ticket, color: "#e50914", sub: "+8.4% vs previous" },
-  { label: "Tickets Sold", value: "1,694", icon: Users, color: "#60a5fa", sub: "+9.1% vs previous" },
-  { label: "Refunds", value: "$680", icon: RotateCcw, color: "#eab308", sub: "-2.3% vs previous" },
-];
-
-const salesRows = [
-  { date: "2026-08-30", bookings: 281, tickets: 405, revenue: "$5,240", refunds: "$45", status: "Closed" },
-  { date: "2026-08-29", bookings: 257, tickets: 368, revenue: "$4,710", refunds: "$60", status: "Closed" },
-  { date: "2026-08-28", bookings: 214, tickets: 302, revenue: "$3,860", refunds: "$35", status: "Closed" },
-  { date: "2026-08-27", bookings: 229, tickets: 331, revenue: "$4,160", refunds: "$50", status: "Closed" },
-  { date: "2026-08-26", bookings: 200, tickets: 288, revenue: "$3,540", refunds: "$30", status: "Open" },
-];
+const money = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  maximumFractionDigits: 0,
+});
 
 export default function Reports() {
   const [period, setPeriod] = useState("Last 7 days");
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    api
+      .get("/reports", { params: { period: periodParams[period] } })
+      .then(({ data: res }) => {
+        if (!cancelled) setData(res);
+      })
+      .catch(() => {
+        if (!cancelled) setData(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [period]);
+
+  if (loading) {
+    return (
+      <div className="kc-page">
+        <div className="kc-head">
+          <div>
+            <h1>Reports</h1>
+            <p className="kc-subtitle">Business and sales reports for record keeping.</p>
+          </div>
+        </div>
+        <div className="kc-subtitle" style={{ padding: "40px 0" }}>
+          Loading reports…
+        </div>
+      </div>
+    );
+  }
+
+  if (hasErrors(data)) {
+    return (
+      <div className="kc-page">
+        <div className="kc-head">
+          <div>
+            <h1>Reports</h1>
+            <p className="kc-subtitle">Business and sales reports for record keeping.</p>
+          </div>
+        </div>
+        <div className="kc-subtitle" style={{ padding: "40px 0" }}>
+          No report data available yet.
+        </div>
+      </div>
+    );
+  }
+
+  const summaryCards = [
+    {
+      label: "Total Revenue",
+      value: money.format(data.summary.revenue.current),
+      icon: Wallet,
+      color: "#22c55e",
+      sub: `${data.summary.revenue.pct >= 0 ? "+" : ""}${data.summary.revenue.pct}% vs previous`,
+    },
+    {
+      label: "Total Bookings",
+      value: data.summary.bookings.current.toLocaleString(),
+      icon: Ticket,
+      color: "#e50914",
+      sub: `${data.summary.bookings.pct >= 0 ? "+" : ""}${data.summary.bookings.pct}% vs previous`,
+    },
+    {
+      label: "Tickets Sold",
+      value: data.summary.tickets.current.toLocaleString(),
+      icon: Users,
+      color: "#60a5fa",
+      sub: `${data.summary.tickets.pct >= 0 ? "+" : ""}${data.summary.tickets.pct}% vs previous`,
+    },
+    {
+      label: "Refunds",
+      value: money.format(data.summary.refunds.current),
+      icon: RotateCcw,
+      color: "#eab308",
+      sub: `${data.summary.refunds.pct >= 0 ? "+" : ""}${data.summary.refunds.pct}% vs previous`,
+    },
+  ];
+
+  const salesRows = (data.sales_summary || []).map((r) => ({
+    date: r.date,
+    bookings: r.bookings,
+    tickets: r.tickets,
+    revenue: money.format(r.revenue),
+    refunds: money.format(r.refunds),
+    status: r.status,
+  }));
+
+  const notesList = [
+    ["Peak hours", data.notes.peak_hours],
+    ["Best performer", data.notes.best_performer],
+    ["Top movie", data.notes.top_movie],
+    ["Refunds", data.notes.refunds_note],
+  ];
+
+  const { revenue_trend: revenueTrend, occupancy_by_month: occupancy } = data;
 
   return (
     <div className="kc-page">
@@ -70,7 +166,7 @@ export default function Reports() {
       </div>
 
       <div className="an-stats">
-        {summary.map((s) => {
+        {summaryCards.map((s) => {
           const Icon = s.icon;
           return (
             <div className="an-stat" key={s.label}>
@@ -102,8 +198,8 @@ export default function Reports() {
             </div>
             <div className="an-chart-wrap">
               <AreaChart
-                labels={dailyRevenue.labels}
-                values={dailyRevenue.values}
+                labels={revenueTrend.labels}
+                values={revenueTrend.values}
                 gradientId="an-rev-grad"
                 format={(v) => `$${(v / 1000).toFixed(1)}k`}
               />
@@ -117,8 +213,8 @@ export default function Reports() {
             </div>
             <div className="an-chart-wrap">
               <BarChart
-                labels={occupancyByCinema.labels}
-                values={occupancyByCinema.values}
+                labels={occupancy.labels}
+                values={occupancy.values}
                 barColor="#60a5fa"
                 format={(v) => `${v}%`}
               />
@@ -131,12 +227,7 @@ export default function Reports() {
             <h3>Notes</h3>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            {[
-              ["Peak hours", "Friday–Sunday evening shows account for 62% of weekly revenue."],
-              ["Best performer", "Legend Phnom Penh leads ticket sales with 1,240 tickets."],
-              ["Top movie", "The Last Emperor remains the highest grossing title this period."],
-              ["Refunds", "Most refunds occur within 2 hours before showtime."],
-            ].map(([t, d]) => (
+            {notesList.map(([t, d]) => (
               <div
                 key={t}
                 style={{

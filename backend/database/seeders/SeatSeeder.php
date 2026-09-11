@@ -7,34 +7,49 @@ use Illuminate\Support\Facades\DB;
 
 class SeatSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        $rows = ['A', 'B', 'C', 'D', 'E'];
+        $rooms = DB::table('rooms')->select('id', 'name', 'total_seats')->get();
 
-        $roomNames = ['Room 1', 'Room 2', 'Room 3'];
+        foreach ($rooms as $room) {
+            $totalSeats = $room->total_seats;
+            $colsPerRow = $totalSeats <= 50 ? 8 : 10;
+            $totalRows = (int) ceil($totalSeats / $colsPerRow);
 
-        foreach ($roomNames as $roomName) {
-            $roomId = DB::table('rooms')->where('name', $roomName)->value('id');
+            $rowLabels = range('A', chr(ord('A') + $totalRows - 1));
 
-            foreach ($rows as $row) {
-                for ($col = 1; $col <= 4; $col++) {
-                    $seatNumber = $row . $col;
+            $vipStart = max(1, $totalRows - 2);
+            $coupleStart = max(1, $totalRows - 1);
+
+            $seatCount = 0;
+
+            foreach ($rowLabels as $rowIndex => $rowLabel) {
+                for ($col = 1; $col <= $colsPerRow; $col++) {
+                    if ($seatCount >= $totalSeats) {
+                        break 2;
+                    }
+
+                    $seatNumber = $rowLabel . $col;
                     $seatType = 'regular';
 
-                    if ($row === 'D' || $row === 'E') {
+                    if ($rowIndex >= $vipStart && $rowIndex < $coupleStart) {
                         $seatType = 'vip';
                     }
-                    if ($row === 'E' && ($col === 3 || $col === 4)) {
-                        $seatType = 'couple';
+
+                    if ($rowIndex >= $coupleStart) {
+                        if ($col % 2 === 0 && $col > 1) {
+                            $seatType = 'couple';
+                        } else {
+                            $seatType = 'vip';
+                        }
                     }
 
                     DB::table('seats')->updateOrInsert(
-                        ['room_id' => $roomId, 'seat_number' => $seatNumber],
+                        ['room_id' => $room->id, 'seat_number' => $seatNumber],
                         ['seat_type' => $seatType, 'created_at' => now(), 'updated_at' => now()]
                     );
+
+                    $seatCount++;
                 }
             }
         }
