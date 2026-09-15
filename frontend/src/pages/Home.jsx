@@ -3,13 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { usePrefs } from "../context/PrefsContext";
 import MovieCard from "../components/MovieCard";
 import CinemaCard from "../components/CinemaCard";
-import {
-  slideImages,
-  nowShowing,
-  comingSoon,
-} from "../data/cinemaData";
+import { nowShowing, comingSoon, cinemas as fallbackCinemas } from "../data/cinemaData";
+import { normalizeCinema, defaultCinemaImage } from "../utils/cinemaFormat";
 import api from "../api/client";
-import { Play, X, ZoomIn } from "lucide-react";
+import { Play, X, ZoomIn, Ticket } from "lucide-react";
 
 const galleryImages = [
   { src: "https://www.areacambodia.com/wp-content/uploads/2023/09/Major%E2%80%8B-Cineplex-Siem-Reap-Movie-Theater-in-Siem-Reap-on-Sivutha-Road.jpg", alt: "Cinema Hall Interior", caption: "Premium Cinema Halls" },
@@ -47,7 +44,13 @@ export default function Home() {
   }, []);
 
   const heroMovies = nowShowing;
-  const totalSlides = slideImages.length;
+  const toDisplay = (c) => normalizeCinema(c, t);
+  const list = dbCinemas.length > 0 ? dbCinemas.map(toDisplay) : fallbackCinemas;
+  const slides = list.map((c) => ({
+    src: c.image || defaultCinemaImage,
+    caption: [c.name, c.area].filter(Boolean).join(" · "),
+  }));
+  const totalSlides = slides.length;
 
   const goToNext = useCallback(() => {
     setCurrentSlide((prev) => (prev + 1) % totalSlides);
@@ -209,29 +212,37 @@ export default function Home() {
 
       {/* ===== IMAGE SLIDER ===== */}
       <section className="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8 pt-0 pb-14 sm:pb-16 md:pb-20">
-        <div className="flex items-center justify-between mb-6 sm:mb-8 flex-wrap gap-3">
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold">{t("home.cinemaAction")}</h2>
+        <div className="flex items-end justify-between mb-6 flex-wrap gap-3">
+          <div>
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold">{t("home.cinemaAction")}</h2>
+          </div>
+          <p className="text-sm text-[var(--app-mute)] max-w-[360px]">
+            {t("cinemas.sliderNote")}
+          </p>
         </div>
-        <div className="relative w-full overflow-hidden rounded-xl sm:rounded-2xl aspect-video md:aspect-[21/8] shadow-[0_20px_50px_rgba(0,0,0,0.6)]">
+        <div className="relative w-full overflow-hidden rounded-[20px] aspect-video md:aspect-[21/8] shadow-[0_20px_50px_rgba(0,0,0,0.6)]">
           <div
             className="flex h-full translate-x-[var(--slide-x)] transition-transform duration-[700ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
             style={{ "--slide-x": `-${currentSlide * 100}%` }}
           >
-            {slideImages.map((slide, idx) => (
+            {slides.map((slide, idx) => (
               <div className="relative flex-[0_0_100%] h-full" key={idx}>
-                <img className="w-full h-full object-cover block" src={slide.src} alt={slide.alt} loading="lazy" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/75 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5 md:p-7 z-[2]">
-                  <p className="text-sm sm:text-base md:text-xl font-extrabold text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.6)]">{slide.caption}</p>
+                <img className="w-full h-full object-cover block" src={slide.src} alt={slide.caption} loading="lazy" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+                <div className="absolute bottom-0 left-0 p-5 sm:p-7 z-[2] flex items-center gap-3">
+                  <span className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-brand text-white shadow-[0_4px_14px_rgba(229,9,20,0.45)]">
+                    <Ticket size={18} />
+                  </span>
+                  <p className="text-base sm:text-xl font-extrabold text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.6)]">{slide.caption}</p>
                 </div>
               </div>
             ))}
           </div>
-          <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 md:bottom-4 md:right-6 z-[3] flex gap-1.5 sm:gap-2">
-            {slideImages.map((_, idx) => (
+          <div className="absolute bottom-4 right-6 z-[3] flex gap-2">
+            {slides.map((_, idx) => (
               <button
                 key={idx}
-                className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-white/40 cursor-pointer transition-all ${idx === currentSlide ? "bg-brand scale-125" : ""}`}
+                className={`w-2.5 h-2.5 rounded-full bg-white/40 cursor-pointer transition-all ${idx === currentSlide ? "bg-brand scale-125" : ""}`}
                 onClick={() => setCurrentSlide(idx)}
               />
             ))}
@@ -268,7 +279,7 @@ export default function Home() {
           ))}
         </div>
         {/* Tablet & Desktop: 3-col masonry that fills the space */}
-        <div className="hidden md:grid grid-cols-3 gap-4 lg:gap-5" style={{ gridAutoRows: "220px" }}>
+        <div className="hidden md:grid grid-cols-3 gap-4 lg:gap-5" style={{ gridAutoRows: "395px" }}>
           {/* Col 1: two normal images */}
           <div className="grid grid-rows-2 gap-4 lg:gap-5">
             {[galleryImages[0], galleryImages[1]].map((img, i) => (

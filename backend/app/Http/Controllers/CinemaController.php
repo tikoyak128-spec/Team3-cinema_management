@@ -3,12 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cinema;
+use App\Services\CloudinaryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class CinemaController extends Controller
 {
+    public function __construct(
+        private CloudinaryService $cloudinary
+    ) {}
+
     public function index(): JsonResponse
     {
         $cinemas = Cinema::with('rooms')->get();
@@ -20,9 +25,9 @@ class CinemaController extends Controller
     {
         $cinema = Cinema::with('rooms')->find($id);
 
-        if (!$cinema) {
+        if (! $cinema) {
             return response()->json([
-                'message' => 'Cinema not found'
+                'message' => 'Cinema not found',
             ], 404);
         }
 
@@ -45,20 +50,33 @@ class CinemaController extends Controller
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('cinemas', 'name')
+                Rule::unique('cinemas', 'name'),
             ],
             'location' => [
                 'required',
-                'string'
+                'string',
             ],
             'area' => ['nullable', 'string', 'max:100'],
             'phone' => ['nullable', 'string', 'max:50'],
             'hours' => ['nullable', 'string', 'max:50'],
+            'image_file' => [
+                'nullable',
+                'file',
+                'max:10240',
+                'mimes:jpg,jpeg,png,gif,webp',
+            ],
             'image' => ['nullable', 'string', 'max:500'],
             'tagline' => ['nullable', 'string', 'max:255'],
             'features' => ['nullable', 'array'],
             'features.*' => ['string', 'max:50'],
+            'description' => ['nullable', 'string'],
         ]);
+
+        if ($request->hasFile('image_file')) {
+            $validated['image'] = $this->cloudinary->uploadImage($request->file('image_file'), 'cinema/cinemas');
+        }
+
+        unset($validated['image_file']);
 
         $cinema = Cinema::create($validated);
 
@@ -72,9 +90,9 @@ class CinemaController extends Controller
     {
         $cinema = Cinema::find($id);
 
-        if (!$cinema) {
+        if (! $cinema) {
             return response()->json([
-                'message' => 'Cinema not found'
+                'message' => 'Cinema not found',
             ], 404);
         }
 
@@ -83,20 +101,33 @@ class CinemaController extends Controller
                 'sometimes',
                 'string',
                 'max:255',
-                Rule::unique('cinemas', 'name')->ignore($cinema->id)
+                Rule::unique('cinemas', 'name')->ignore($cinema->id),
             ],
             'location' => [
                 'sometimes',
-                'string'
+                'string',
             ],
             'area' => ['sometimes', 'string', 'max:100'],
             'phone' => ['sometimes', 'string', 'max:50'],
             'hours' => ['sometimes', 'string', 'max:50'],
+            'image_file' => [
+                'nullable',
+                'file',
+                'max:10240',
+                'mimes:jpg,jpeg,png,gif,webp',
+            ],
             'image' => ['sometimes', 'string', 'max:500'],
             'tagline' => ['sometimes', 'string', 'max:255'],
             'features' => ['sometimes', 'array'],
             'features.*' => ['string', 'max:50'],
+            'description' => ['sometimes', 'string'],
         ]);
+
+        if ($request->hasFile('image_file')) {
+            $validated['image'] = $this->cloudinary->uploadImage($request->file('image_file'), 'cinema/cinemas');
+        }
+
+        unset($validated['image_file']);
 
         $cinema->update($validated);
 
@@ -109,16 +140,16 @@ class CinemaController extends Controller
     {
         $cinema = Cinema::find($id);
 
-        if (!$cinema) {
+        if (! $cinema) {
             return response()->json([
-                'message' => 'Cinema not found'
+                'message' => 'Cinema not found',
             ], 404);
         }
 
         $cinema->delete();
 
         return response()->json([
-            'message' => 'Cinema deleted successfully'
+            'message' => 'Cinema deleted successfully',
         ]);
     }
 }

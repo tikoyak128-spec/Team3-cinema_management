@@ -130,6 +130,9 @@ export default function Footer() {
               <Link className="text-xs sm:text-sm text-[var(--app-mute)] hover:text-brand transition-all no-underline w-fit" to="/profile">
                 {t("nav.myProfile")}
               </Link>
+              <Link className="text-xs sm:text-sm text-[var(--app-mute)] hover:text-brand transition-all no-underline w-fit" to="/my-bookings">
+                {t("nav.myBookings")}
+              </Link>
             </div>
           </div>
 

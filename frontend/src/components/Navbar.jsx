@@ -99,10 +99,9 @@ export default function Navbar() {
             {/* Book Tickets CTA - Desktop */}
             <Link
               className="hidden sm:inline-flex items-center gap-1.5 bg-brand/10 hover:bg-brand/20 border border-brand/25 hover:border-brand/40 text-brand text-xs font-bold px-3.5 py-2 rounded-lg transition-all duration-200 no-underline"
-              to="/now-showing"
+              to="/my-bookings"
             >
-              <Ticket size={14} />
-              <span className="hidden md:inline">{t("nav.book")}</span>
+              <span className="hidden md:inline">{t("nav.myBookings")}</span>
             </Link>
 
             {/* Auth section */}
@@ -116,8 +115,13 @@ export default function Navbar() {
                       (user.name || "U").charAt(0).toUpperCase()
                     )}
                   </div>
-                  <span className="text-xs font-bold text-[var(--app-mute)] max-w-[120px] truncate hidden xl:block group-hover:text-[var(--app-ink)] transition-colors">
-                    {user.name || user.email}
+                  <span className="hidden xl:flex flex-col leading-tight max-w-[120px] min-w-0">
+                    <span className="text-xs font-bold text-[var(--app-mute)] truncate group-hover:text-[var(--app-ink)] transition-colors">
+                      {user.name || user.email}
+                    </span>
+                    <span className="text-[10px] font-semibold text-brand capitalize truncate">
+                      {user.role || "customer"}
+                    </span>
                   </span>
                 </Link>
                 <button
@@ -269,6 +273,14 @@ export default function Navbar() {
                 >
                   <User size={16} />
                   {t("nav.viewProfile")}
+                </Link>
+                <Link
+                  to="/my-bookings"
+                  onClick={closeMenu}
+                  className="flex items-center justify-center gap-2 w-full bg-[var(--app-fill)] hover:bg-[var(--app-fill2)] border border-[var(--app-edge)] text-[var(--app-ink)] text-sm font-bold py-3 rounded-xl transition-all cursor-pointer no-underline"
+                >
+                  <Ticket size={16} />
+                  {t("nav.myBookings")}
                 </Link>
                 <button
                   className="flex items-center justify-center gap-2 w-full bg-[var(--app-fill)] hover:bg-[var(--app-fill2)] border border-[var(--app-edge)] text-[var(--app-ink)] text-sm font-bold py-3 rounded-xl transition-all cursor-pointer"

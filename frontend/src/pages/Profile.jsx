@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import api from "../api/client";
+import { usePrefs } from "../context/PrefsContext";
+import api, { buildFormData } from "../api/client";
 import {
   User,
   Mail,
@@ -44,6 +45,7 @@ function Field({ icon: Icon, label, name, value, onChange, type = "text", placeh
 export default function Profile({ embedded = false }) {
   const navigate = useNavigate();
   const { user, isAuthenticated, updateUser, logout } = useAuth();
+  const { t } = usePrefs();
   const fileInputRef = useRef(null);
 
   const [profile, setProfile] = useState({
@@ -53,6 +55,7 @@ export default function Profile({ embedded = false }) {
     avatar: user?.avatar || "",
   });
   const [avatarPreview, setAvatarPreview] = useState(user?.avatar || null);
+  const [avatarFile, setAvatarFile] = useState(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileMsg, setProfileMsg] = useState({ type: "", text: "" });
 
@@ -105,12 +108,9 @@ export default function Profile({ embedded = false }) {
   const handleAvatarPick = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setAvatarPreview(reader.result);
-      setProfile((prev) => ({ ...prev, avatar: reader.result }));
-    };
-    reader.readAsDataURL(file);
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+    setProfileMsg({ type: "", text: "" });
   };
 
   const saveProfile = async (e) => {
@@ -118,13 +118,18 @@ export default function Profile({ embedded = false }) {
     setSavingProfile(true);
     setProfileMsg({ type: "", text: "" });
     try {
-      const { data } = await api.put("/profile", {
+      const payload = buildFormData({
+        _method: "put",
         name: profile.name,
         email: profile.email,
         phone: profile.phone || null,
         avatar: profile.avatar || null,
+        avatar_file: avatarFile,
       });
+      if (avatarFile) payload.delete("avatar");
+      const { data } = await api.post("/profile", payload);
       updateUser({ ...user, ...data.user });
+      setAvatarFile(null);
       setProfileMsg({ type: "success", text: data.message });
     } catch (err) {
       const msg =
@@ -234,7 +239,7 @@ export default function Profile({ embedded = false }) {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-brand">
                   <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
                 </svg>
-                Member since{" "}
+                {t("profile.memberSince")}{" "}
                 {user?.created_at
                   ? new Date(user.created_at).toLocaleDateString(undefined, {
                       year: "numeric",
@@ -249,7 +254,7 @@ export default function Profile({ embedded = false }) {
             onClick={() => { logout(); navigate("/"); }}
             className="inline-flex items-center gap-2 bg-[var(--app-fill)] hover:bg-[var(--app-fill2)] border border-[var(--app-edge)] text-[var(--app-ink)] text-sm font-bold px-5 py-2.5 rounded-xl transition-all cursor-pointer shrink-0"
           >
-            <LogOut size={15} /> Log Out
+            <LogOut size={15} /> {t("profile.logOut")}
           </button>
         </div>
       </div>
@@ -260,13 +265,13 @@ export default function Profile({ embedded = false }) {
           className={`text-[13px] font-bold px-5 py-2.5 rounded-full transition-all cursor-pointer ${activeTab === "profile" ? "bg-brand text-white" : "text-[var(--app-mute)] hover:text-[var(--app-ink)]"}`}
           onClick={() => setActiveTab("profile")}
         >
-          Profile
+          {t("profile.tabProfile")}
         </button>
         <button
           className={`text-[13px] font-bold px-5 py-2.5 rounded-full transition-all cursor-pointer ${activeTab === "password" ? "bg-brand text-white" : "text-[var(--app-mute)] hover:text-[var(--app-ink)]"}`}
           onClick={() => setActiveTab("password")}
         >
-          Security
+          {t("profile.tabSecurity")}
         </button>
       </div>
 
@@ -281,9 +286,9 @@ export default function Profile({ embedded = false }) {
             {activeTab === "profile" ? (
               <form onSubmit={saveProfile} className="bg-[linear-gradient(135deg,var(--app-panel),var(--app-panel2))] border border-[var(--app-edge)] rounded-2xl p-6 sm:p-8 flex flex-col gap-5">
                 <div>
-                  <h2 className="text-lg sm:text-xl font-extrabold">Personal Information</h2>
+                  <h2 className="text-lg sm:text-xl font-extrabold">{t("profile.personalInfo")}</h2>
                   <p className="text-xs text-[var(--app-mute)] mt-1">
-                    Update your details so we know how to reach you.
+                    {t("profile.personalInfoDesc")}
                   </p>
                 </div>
 
@@ -300,7 +305,7 @@ export default function Profile({ embedded = false }) {
 
                 <Field
                   icon={User}
-                  label="Full Name"
+                  label={t("profile.fullName")}
                   name="name"
                   value={profile.name}
                   onChange={handleProfileChange}
@@ -308,7 +313,7 @@ export default function Profile({ embedded = false }) {
                 />
                 <Field
                   icon={Mail}
-                  label="Email Address"
+                  label={t("profile.emailAddress")}
                   name="email"
                   type="email"
                   value={profile.email}
@@ -317,7 +322,7 @@ export default function Profile({ embedded = false }) {
                 />
                 <Field
                   icon={Phone}
-                  label="Phone Number (optional)"
+                  label={t("profile.phoneOptional")}
                   name="phone"
                   type="tel"
                   value={profile.phone}
@@ -332,16 +337,16 @@ export default function Profile({ embedded = false }) {
                     className="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-white text-sm font-bold px-6 py-3 rounded-full transition-all shadow-[0_4px_16px_rgba(229,9,20,0.35)] cursor-pointer disabled:opacity-50"
                   >
                     {savingProfile ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-                    {savingProfile ? "Saving..." : "Save Changes"}
+                    {savingProfile ? t("profile.saving") : t("profile.saveChanges")}
                   </button>
                 </div>
               </form>
             ) : (
               <form onSubmit={savePassword} className="bg-[linear-gradient(135deg,var(--app-panel),var(--app-panel2))] border border-[var(--app-edge)] rounded-2xl p-6 sm:p-8 flex flex-col gap-5">
                 <div>
-                  <h2 className="text-lg sm:text-xl font-extrabold">Change Password</h2>
+                  <h2 className="text-lg sm:text-xl font-extrabold">{t("profile.changePassword")}</h2>
                   <p className="text-xs text-[var(--app-mute)] mt-1">
-                    Use at least 8 characters with a mix of letters and numbers.
+                    {t("profile.changePasswordDesc")}
                   </p>
                 </div>
 
@@ -357,7 +362,7 @@ export default function Profile({ embedded = false }) {
                 )}
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-[var(--app-mute)]">Current Password</label>
+                  <label className="text-xs font-semibold text-[var(--app-mute)]">{t("profile.currentPassword")}</label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--app-mute)] pointer-events-none">
                       <Lock size={16} />
@@ -374,7 +379,7 @@ export default function Profile({ embedded = false }) {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-[var(--app-mute)]">New Password</label>
+                  <label className="text-xs font-semibold text-[var(--app-mute)]">{t("profile.newPassword")}</label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--app-mute)] pointer-events-none">
                       <Lock size={16} />
@@ -391,7 +396,7 @@ export default function Profile({ embedded = false }) {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-[var(--app-mute)]">Confirm New Password</label>
+                  <label className="text-xs font-semibold text-[var(--app-mute)]">{t("profile.confirmNewPassword")}</label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--app-mute)] pointer-events-none">
                       <Lock size={16} />
@@ -422,7 +427,7 @@ export default function Profile({ embedded = false }) {
                     className="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-white text-sm font-bold px-6 py-3 rounded-full transition-all shadow-[0_4px_16px_rgba(229,9,20,0.35)] cursor-pointer disabled:opacity-50"
                   >
                     {savingPassword ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-                    {savingPassword ? "Updating..." : "Update Password"}
+                    {savingPassword ? t("profile.updating") : t("profile.updatePassword")}
                   </button>
                 </div>
               </form>
@@ -433,21 +438,21 @@ export default function Profile({ embedded = false }) {
           <aside className="flex flex-col gap-6">
             <div className="bg-[linear-gradient(135deg,var(--app-panel),var(--app-panel2))] border border-[var(--app-edge)] rounded-2xl p-6">
               <h3 className="text-sm font-extrabold mb-4 uppercase tracking-wider text-[var(--app-mute)]">
-                Account Info
+                {t("profile.accountInfo")}
               </h3>
               <div className="flex flex-col gap-4 text-sm">
                 <div className="flex justify-between gap-3">
-                  <span className="text-[var(--app-mute)]">Email</span>
+                  <span className="text-[var(--app-mute)]">{t("profile.email")}</span>
                   <span className="font-semibold text-right truncate max-w-[150px]">{user?.email}</span>
                 </div>
                 <div className="flex justify-between gap-3">
-                  <span className="text-[var(--app-mute)]">Phone</span>
+                  <span className="text-[var(--app-mute)]">{t("profile.phone")}</span>
                   <span className="font-semibold text-right">{profile.phone || "—"}</span>
                 </div>
                 <div className="flex justify-between gap-3">
-                  <span className="text-[var(--app-mute)]">Status</span>
+                  <span className="text-[var(--app-mute)]">{t("profile.status")}</span>
                   <span className="font-semibold text-emerald-400">
-                    {user?.email_verified_at ? "Verified" : "Unverified"}
+                    {user?.email_verified_at ? t("profile.verified") : t("profile.unverified")}
                   </span>
                 </div>
               </div>
@@ -455,17 +460,16 @@ export default function Profile({ embedded = false }) {
 
             <div className="bg-[linear-gradient(135deg,var(--app-panel),var(--app-panel2))] border border-[var(--app-edge)] rounded-2xl p-6">
               <h3 className="text-sm font-extrabold mb-4 uppercase tracking-wider text-[var(--app-mute)]">
-                Need Help?
+                {t("profile.needHelp")}
               </h3>
               <p className="text-xs text-[var(--app-mute)] leading-relaxed mb-4">
-                Changing your email will update the address used for booking confirmations and
-                account notifications.
+                {t("profile.needHelpDesc")}
               </p>
               <button
                 onClick={() => navigate("/now-showing")}
                 className="w-full bg-[var(--app-fill)] hover:bg-[var(--app-fill2)] border border-[var(--app-edge)] text-[var(--app-ink)] text-sm font-bold py-2.5 rounded-xl transition-all cursor-pointer"
               >
-                Browse Now Showing
+                {t("profile.browseNowShowing")}
               </button>
             </div>
           </aside>

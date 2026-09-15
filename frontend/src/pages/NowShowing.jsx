@@ -1,16 +1,20 @@
 import MovieCard from "../components/MovieCard";
 import HeroBanner from "../components/HeroBanner";
 import { usePrefs } from "../context/PrefsContext";
+import { useSearchParams } from "react-router-dom";
 import { nowShowing } from "../data/cinemaData";
 
 export default function NowShowing() {
   const { t } = usePrefs();
+  const [searchParams] = useSearchParams();
+  const promo = searchParams.get("promo");
   return (
     <>
       <HeroBanner
         badge={t("nowShowing.heroBadge")}
         title={t("nav.nowShowing")}
         desc={t("nowShowing.heroDesc")}
+        image="https://images.thedirect.com/media/article_full/disney-2025.jpg"
       />
 
       <section className="max-w-[1280px] mx-auto px-6 md:px-12 py-16" id="now-showing">
@@ -19,7 +23,7 @@ export default function NowShowing() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           {nowShowing.map((movie) => (
-            <MovieCard key={movie.title} movie={movie} />
+            <MovieCard key={movie.title} movie={movie} promo={promo} />
           ))}
         </div>
       </section>

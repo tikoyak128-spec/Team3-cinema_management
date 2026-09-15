@@ -4,19 +4,24 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Notifications\OtpNotification;
+use App\Services\CloudinaryService;
+use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Laravel\Socialite\Facades\Socialite;
-use Illuminate\Support\Str;
 use Throwable;
 
 class AuthController extends Controller
 {
+    public function __construct(
+        private CloudinaryService $cloudinary
+    ) {}
+
     public function register(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -42,8 +47,8 @@ class AuthController extends Controller
 
         try {
             $user->notify(new OtpNotification($otpCode));
-        } catch (\Throwable $e) {
-            Log::warning('Failed to send OTP email: ' . $e->getMessage());
+        } catch (Throwable $e) {
+            Log::warning('Failed to send OTP email: '.$e->getMessage());
         }
 
         return response()->json([
@@ -61,7 +66,7 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'User not found.'], 404);
         }
 
@@ -69,7 +74,7 @@ class AuthController extends Controller
             return response()->json(['message' => 'Email already verified.'], 400);
         }
 
-        if (!$user->otp || !$user->otp_expires_at) {
+        if (! $user->otp || ! $user->otp_expires_at) {
             return response()->json(['message' => 'No OTP found. Please request a new one.'], 400);
         }
 
@@ -77,7 +82,7 @@ class AuthController extends Controller
             return response()->json(['message' => 'OTP has expired. Please request a new one.'], 400);
         }
 
-        if (!hash_equals($user->otp, $request->otp)) {
+        if (! hash_equals($user->otp, $request->otp)) {
             return response()->json(['message' => 'Invalid OTP code.'], 400);
         }
 
@@ -104,7 +109,7 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'User not found.'], 404);
         }
 
@@ -122,8 +127,8 @@ class AuthController extends Controller
 
         try {
             $user->notify(new OtpNotification($otpCode));
-        } catch (\Throwable $e) {
-            Log::warning('Failed to send OTP email: ' . $e->getMessage());
+        } catch (Throwable $e) {
+            Log::warning('Failed to send OTP email: '.$e->getMessage());
         }
 
         return response()->json([
@@ -199,13 +204,13 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (! $user || ! Hash::check($request->password, $user->password)) {
             return response()->json([
                 'message' => 'Invalid credentials',
             ], 401);
         }
 
-        if (!$user->email_verified_at) {
+        if (! $user->email_verified_at) {
             return response()->json([
                 'message' => 'Please verify your email before logging in.',
                 'requires_verification' => true,
@@ -244,6 +249,12 @@ class AuthController extends Controller
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
             'phone' => ['nullable', 'string', 'max:20'],
             'avatar' => ['nullable', 'string', 'max:40000'],
+            'avatar_file' => [
+                'nullable',
+                'file',
+                'max:5120',
+                'mimes:jpg,jpeg,png,gif,webp',
+            ],
             'current_password' => ['nullable', 'string', 'required_with:new_password'],
             'new_password' => ['nullable', 'string', 'min:8', 'confirmed'],
         ]);
@@ -251,10 +262,15 @@ class AuthController extends Controller
         $user->name = $validated['name'];
         $user->email = $validated['email'];
         $user->phone = $validated['phone'] ?? null;
-        $user->avatar = $validated['avatar'] ?? $user->avatar;
 
-        if (!empty($validated['new_password'])) {
-            if (!Hash::check($validated['current_password'], $user->password)) {
+        if ($request->hasFile('avatar_file')) {
+            $user->avatar = $this->cloudinary->uploadImage($request->file('avatar_file'), 'cinema/users/avatars');
+        } elseif (array_key_exists('avatar', $validated)) {
+            $user->avatar = $validated['avatar'];
+        }
+
+        if (! empty($validated['new_password'])) {
+            if (! Hash::check($validated['current_password'], $user->password)) {
                 return response()->json([
                     'message' => 'Current password is incorrect.',
                     'errors' => ['current_password' => ['The current password is incorrect.']],
@@ -288,7 +304,7 @@ class AuthController extends Controller
 
             $user = User::where('email', $googleUser->getEmail())->first();
 
-            if (!$user) {
+            if (! $user) {
                 $user = User::create([
                     'name' => $googleUser->getName() ?? $googleUser->getEmail(),
                     'email' => $googleUser->getEmail(),
@@ -322,14 +338,14 @@ class AuthController extends Controller
             $frontendUrl = config('app.frontend_url') ?? 'http://localhost:5173';
 
             return redirect()->to(
-                $frontendUrl . '/login?google=' . urlencode(json_encode($payload))
+                $frontendUrl.'/login?google='.urlencode(json_encode($payload))
             );
         } catch (Throwable $e) {
-            Log::error('Google login failed: ' . $e->getMessage());
+            Log::error('Google login failed: '.$e->getMessage());
 
             $frontendUrl = config('app.frontend_url') ?? 'http://localhost:5173';
 
-            return redirect()->to($frontendUrl . '/login?google_error=1');
+            return redirect()->to($frontendUrl.'/login?google_error=1');
         }
     }
 }

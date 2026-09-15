@@ -23,7 +23,7 @@ class UserController extends Controller
     {
         $user = User::withCount('bookings')->find($id);
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'message' => 'User not found',
             ], 404);
@@ -48,6 +48,7 @@ class UserController extends Controller
             'password' => $validated['password'],
             'phone' => $validated['phone'] ?? null,
             'role' => $validated['role'],
+            'email_verified_at' => now(),
         ]);
 
         return response()->json($user, 201);
@@ -57,7 +58,7 @@ class UserController extends Controller
     {
         $user = User::find($id);
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'message' => 'User not found',
             ], 404);
@@ -70,6 +71,10 @@ class UserController extends Controller
             'phone' => ['nullable', 'string', 'max:20'],
             'role' => ['sometimes', Rule::in(['admin', 'staff', 'customer'])],
         ]);
+
+        if (isset($validated['role']) && in_array($validated['role'], ['admin', 'staff'], true)) {
+            $validated['email_verified_at'] = $user->email_verified_at ?? now();
+        }
 
         if ($user->id === $request->user()->id && isset($validated['role']) && $validated['role'] !== 'admin') {
             return response()->json([
@@ -90,7 +95,7 @@ class UserController extends Controller
     {
         $user = User::find($id);
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'message' => 'User not found',
             ], 404);

@@ -11,6 +11,7 @@ export default function ComingSoon() {
         badge={t("comingSoon.heroBadge")}
         title={t("nav.comingSoon")}
         desc={t("comingSoon.heroDesc")}
+        image="https://static1.srcdn.com/wordpress/wp-content/uploads/2025/04/movies-in-theaters-may-2025.jpg"
       />
 
       <section className="max-w-[1280px] mx-auto px-6 md:px-12 py-16" id="coming-soon">

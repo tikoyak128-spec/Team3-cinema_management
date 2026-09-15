@@ -10,6 +10,7 @@ use App\Http\Controllers\RoomController;
 use App\Http\Controllers\SeatController;
 use App\Http\Controllers\ShowtimeController;
 use App\Http\Controllers\TicketController;
+use App\Http\Controllers\UploadController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -30,6 +31,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
     Route::put('/profile', [AuthController::class, 'updateProfile']);
+
+    Route::post('/upload/image', [UploadController::class, 'uploadImage']);
+    Route::post('/upload/video', [UploadController::class, 'uploadVideo']);
+    Route::post('/upload', [UploadController::class, 'uploadFile']);
 });
 
 // Public resource routes (read-only for customers)
@@ -42,12 +47,28 @@ Route::apiResource('seats', SeatController::class)->only(['index', 'show']);
 
 // Bookings (authenticated users)
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('bookings/my', [BookingController::class, 'myBookings']);
     Route::apiResource('bookings', BookingController::class)->only(['index', 'store', 'show']);
     Route::get('bookings/{id}/payment', [BookingController::class, 'checkPayment']);
 });
 
 Route::get('tickets/{ticket}', [TicketController::class, 'show']);
 Route::post('tickets/{ticket}/check-in', [TicketController::class, 'checkIn']);
+
+// Staff-only routes (staff + admin)
+Route::middleware(['auth:sanctum', 'staff'])->prefix('staff')->group(function () {
+    Route::get('bookings/search', [BookingController::class, 'searchByCode']);
+    Route::get('tickets/search', [TicketController::class, 'searchByCode']);
+    Route::apiResource('bookings', BookingController::class)->only(['index', 'show']);
+    Route::post('bookings', [BookingController::class, 'storeStaff']);
+    Route::get('showtimes', [ShowtimeController::class, 'index']);
+    Route::get('showtimes/{showtime}', [ShowtimeController::class, 'show']);
+    Route::get('showtimes/{showtime}/seats', [SeatController::class, 'forShowtime']);
+    Route::apiResource('rooms', RoomController::class)->only(['index', 'show']);
+    Route::apiResource('seats', SeatController::class)->only(['index', 'show']);
+    Route::get('tickets/{ticket}', [TicketController::class, 'show']);
+    Route::post('tickets/{ticket}/check-in', [TicketController::class, 'checkIn']);
+});
 
 // Admin-only routes (full CRUD)
 Route::middleware(['auth:sanctum', 'admin'])->group(function () {
