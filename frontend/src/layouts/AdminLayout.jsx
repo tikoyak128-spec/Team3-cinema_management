@@ -4,16 +4,15 @@ import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { usePrefs } from "../context/PrefsContext";
 import AdminFooter from "../components/AdminFooter";
+import LangSwitch from "../components/LangSwitch";
 import { adminNavSections } from "../config/adminNav";
 import {
-  Bell,
   CircleUser,
   Clapperboard,
   House,
   LogOut,
   Moon,
   PanelLeft,
-  Settings,
   Sun,
 } from "lucide-react";
 
@@ -217,11 +216,17 @@ export default function AdminLayout({ children }) {
             className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors duration-200 bg-[rgba(0,0,0,0.03)] dark:bg-[rgba(255,255,255,0.03)] border-[rgba(0,0,0,0.1)] dark:border-dark-border hover:border-[rgba(229,9,20,0.3)] ${compact ? "justify-center" : ""}`}
             onClick={() => setProfileOpen((p) => !p)}
           >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand/10"><CircleUser size={20} /></span>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand/10 text-[13px] font-bold text-brand">
+              {user?.avatar ? (
+                <img src={user.avatar} alt={user?.name} className="h-full w-full object-cover" />
+              ) : (
+                <CircleUser size={20} />
+              )}
+            </span>
             {!compact && (
               <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-                <span className="text-[13px] font-semibold text-[#1a1a1a] dark:text-[#f5f5f5]">{user?.name || t("admin.adminUser")}</span>
-                <span className="text-[11px] text-muted">{t("admin.administrator")}</span>
+                <span className="truncate text-[13px] font-semibold text-[#1a1a1a] dark:text-[#f5f5f5]">{user?.name || t("admin.adminUser")}</span>
+                <span className="truncate text-[11px] text-muted">{user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : t("admin.administrator")}</span>
               </div>
             )}
             {!compact && (
@@ -274,17 +279,19 @@ export default function AdminLayout({ children }) {
             </div>
           </div>
           <div className="flex items-center gap-2.5">
+            <LangSwitch size="sm" />
             {/* Theme switcher toggle button */}
             <button className={btnBase} onClick={toggleTheme} title={t("admin.toggleTheme")}>
               {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
-            <button className={`${btnBase} relative`} title={t("admin.notifications")}>
-              <Bell size={18} />
-              <span className={`absolute right-2 top-2 h-[7px] w-[7px] rounded-full border-2 bg-brand ${isDarkMode ? "border-[#050505]" : "border-[#f6f6f6]"}`}></span>
-            </button>
-            <button className={btnBase} title={t("admin.settings")}><Settings size={18} /></button>
-            <div className="ml-1.5 flex cursor-pointer items-center gap-2.5 rounded-[10px] border px-3 py-1.5 transition-colors duration-200 bg-[rgba(0,0,0,0.03)] dark:bg-[rgba(255,255,255,0.03)] border-[rgba(0,0,0,0.1)] dark:border-dark-border hover:bg-black/5 dark:hover:bg-white/5">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand/10"><CircleUser size={18} /></span>
+            <div onClick={() => handleNav("/admin/profile")} className="ml-1.5 flex cursor-pointer items-center gap-2.5 rounded-[10px] border px-3 py-1.5 transition-colors duration-200 bg-[rgba(0,0,0,0.03)] dark:bg-[rgba(255,255,255,0.03)] border-[rgba(0,0,0,0.1)] dark:border-dark-border hover:bg-black/5 dark:hover:bg-white/5" title={t("admin.myProfile")}>
+              <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-brand/10 text-[11px] font-bold text-brand">
+                {user?.avatar ? (
+                  <img src={user.avatar} alt={user?.name} className="h-full w-full object-cover" />
+                ) : (
+                  <CircleUser size={18} />
+                )}
+              </span>
               <span className="max-md:hidden text-[13px] font-semibold">{user?.name || t("admin.adminUser")}</span>
             </div>
           </div>

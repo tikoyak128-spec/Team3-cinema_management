@@ -166,6 +166,7 @@ export default function Cinemas() {
         badge={t("cinemas.heroBadge")}
         title={t("nav.cinemas")}
         desc={t("cinemas.heroDesc")}
+        image="https://p.turbosquid.com/ts-thumb/2s/uqdk64/ZH/r6/jpg/1684313993/1920x1080/fit_q87/26e0e3c7ae76f875dd9553ffd5d6e3ccda6dd999/r6.jpg"
       />
 
       {/* Stats strip */}

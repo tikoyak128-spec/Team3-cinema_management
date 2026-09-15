@@ -18,6 +18,7 @@ import ComingSoon from './pages/ComingSoon'
 import Cinemas from './pages/Cinemas'
 import Promotion from './pages/Promotion'
 import Profile from './pages/Profile'
+import MyBookings from './pages/MyBookings'
 import Booking from './pages/Booking'
 import Watch from './pages/Watch'
 import BookingList from './pages/admin/dashboard/bookings/BookingList'
@@ -38,17 +39,24 @@ import Analytics from './pages/admin/dashboard/analytics/Analytics'
 import Reports from './pages/admin/dashboard/analytics/Reports'
 import UsersList from './pages/admin/dashboard/users/UsersList'
 import UserForm from './pages/admin/dashboard/users/UserForm'
-import Preferences from './pages/admin/dashboard/preferences/Preferences'
 import Overview from './pages/admin/dashboard/overview/Overview'
 import StaffDashboard from './staff/Dashboard'
-import StaffCheckIn from './staff/CheckIn'
+import StaffSellTicket from './staff/SellTicket'
 import StaffSearchTicket from './staff/SearchTicket'
-import StaffTicketDetails from './staff/TicketDetails'
+import StaffCheckIn from './staff/CheckIn'
 
 function AdminRoute({ children }) {
   return (
     <RequireRole role="admin">
       <AdminLayout>{children}</AdminLayout>
+    </RequireRole>
+  )
+}
+
+function StaffRoute({ children }) {
+  return (
+    <RequireRole role="staff">
+      <StaffLayout>{children}</StaffLayout>
     </RequireRole>
   )
 }
@@ -81,6 +89,14 @@ function App() {
               element={
                 <RequireAuth>
                   <Booking />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/my-bookings"
+              element={
+                <RequireAuth>
+                  <MyBookings />
                 </RequireAuth>
               }
             />
@@ -119,15 +135,14 @@ function App() {
         <Route path="/admin/users" element={<AdminRoute><UsersList /></AdminRoute>} />
         <Route path="/admin/users/create" element={<AdminRoute><UserForm /></AdminRoute>} />
         <Route path="/admin/users/:id/edit" element={<AdminRoute><UserForm isEdit /></AdminRoute>} />
-        <Route path="/admin/preferences" element={<AdminRoute><Preferences /></AdminRoute>} />
         <Route path="/admin/profile" element={<AdminRoute><Profile embedded /></AdminRoute>} />
 
         {/* Staff Routes */}
-        <Route path="/staff/dashboard" element={<StaffLayout><StaffDashboard /></StaffLayout>} />
-        <Route path="/staff/bookings" element={<StaffLayout><StaffTicketDetails /></StaffLayout>} />
-        <Route path="/staff/search" element={<StaffLayout><StaffSearchTicket /></StaffLayout>} />
-        <Route path="/staff/checkin" element={<StaffLayout><StaffCheckIn /></StaffLayout>} />
-        <Route path="/staff/customers" element={<StaffLayout><StaffTicketDetails /></StaffLayout>} />
+        <Route path="/staff/dashboard" element={<StaffRoute><StaffDashboard /></StaffRoute>} />
+        <Route path="/staff/sell" element={<StaffRoute><StaffSellTicket /></StaffRoute>} />
+        <Route path="/staff/search" element={<StaffRoute><StaffSearchTicket /></StaffRoute>} />
+        <Route path="/staff/checkin" element={<StaffRoute><StaffCheckIn /></StaffRoute>} />
+        <Route path="/staff/profile" element={<StaffRoute><Profile embedded /></StaffRoute>} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

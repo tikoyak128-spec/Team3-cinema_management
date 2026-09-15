@@ -1,6 +1,7 @@
 import { ArrowRight, MapPin, Film, Ticket, Star, Users, Heart, Shield, Award, Tv, Popcorn, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { usePrefs } from "../context/PrefsContext";
+import HeroBanner from "../components/HeroBanner";
 
 const stats = [
   { value: "50+", labelKey: "home.hallsNationwide" },
@@ -102,25 +103,12 @@ export default function About() {
   const { t } = usePrefs();
   return (
     <>
-      {/* Hero Banner */}
-      <div className="relative min-h-[42vh] md:min-h-[46vh] flex items-center justify-center overflow-hidden border-b border-white/5">
-        <div
-          className="absolute inset-0 bg-cover bg-center animate-[heroZoom_12s_ease-in-out_forwards]"
-          style={{
-            backgroundImage: `url('https://www.isd.my/wp-content/uploads/2022/10/prince-view-1-1024x469.jpg')`,
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 to-black/80" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(229,9,20,0.28),transparent_65%)]" />
-        <div className="relative z-10 text-center px-6 md:px-12 pt-20 pb-16 md:pt-28 md:py-24 max-w-[900px] mx-auto">
-          <h1 className="text-4xl md:text-6xl font-black text-white capitalize tracking-tight mb-4">
-            {t("footer.aboutUs")}
-          </h1>
-          <p className="text-sm md:text-base text-gray-300 leading-relaxed max-w-[600px] mx-auto mb-6">
-            {t("about.heroText")}
-          </p>
-        </div>
-      </div>
+      {/* Page Header */}
+      <HeroBanner
+        title={t("footer.aboutUs")}
+        desc={t("about.heroText")}
+        image="https://s.studiobinder.com/wp-content/uploads/2025/05/Film-Lighting-and-Artificial-Lighting-on-Movie-Set-Production-Cast-and-Crew.jpg"
+      />
 
       {/* About Story */}
       <section className="max-w-[1280px] mx-auto px-6 md:px-12 py-16 md:py-20">

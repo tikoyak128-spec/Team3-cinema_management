@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
-import { DoorOpen, Loader2, Ticket, TriangleAlert, ScanLine, MapPin, Building2, ChevronDown } from "lucide-react";
+import { useNavigate, useParams, Link, useSearchParams } from "react-router-dom";
+import { DoorOpen, Loader2, Ticket, TriangleAlert, ScanLine, MapPin, Building2, ChevronDown, BadgePercent } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
@@ -14,6 +14,8 @@ const formatSeat = (seatNumber) => seatNumber;
 export default function Booking() {
   const navigate = useNavigate();
   const { movieTitle } = useParams();
+  const [searchParams] = useSearchParams();
+  const promoId = searchParams.get("promo");
   const { user } = useAuth();
   const movieName = useMemo(() => decodeURIComponent(movieTitle || "Unknown Movie"), [movieTitle]);
 
@@ -35,7 +37,26 @@ export default function Booking() {
   const [errorMsg, setErrorMsg] = useState("");
   const [success, setSuccess] = useState(null);
   const [expired, setExpired] = useState(false);
+  const [activePromo, setActivePromo] = useState(null);
   const pollRef = useRef(null);
+
+  useEffect(() => {
+    if (!promoId) return;
+    let cancelled = false;
+    api
+      .get("/promotions")
+      .then((res) => {
+        if (cancelled) return;
+        const match = (res.data || []).find((p) => String(p.id) === String(promoId));
+        setActivePromo(match || null);
+      })
+      .catch(() => {
+        if (!cancelled) setActivePromo(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [promoId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -157,10 +178,23 @@ export default function Booking() {
     return rows.map((row) => ({ row, seats: map[row] }));
   }, [seats]);
 
-  const totalAmount = useMemo(() => {
+  const subtotal = useMemo(() => {
     if (!selectedShowtime) return 0;
     return selectedShowtime.price * selectedSeats.length;
   }, [selectedShowtime, selectedSeats]);
+
+  const promoRate = useMemo(() => {
+    if (!activePromo) return 0;
+    const pct = parseInt((activePromo.discount || "").replace(/[^0-9]/g, ""), 10);
+    return Number.isFinite(pct) && pct > 0 ? pct : 0;
+  }, [activePromo]);
+
+  const discountAmount = useMemo(() => {
+    if (!promoRate) return 0;
+    return Math.round(subtotal * (promoRate / 100) * 100) / 100;
+  }, [promoRate, subtotal]);
+
+  const totalAmount = useMemo(() => Math.round((subtotal - discountAmount) * 100) / 100, [subtotal, discountAmount]);
 
   const currency = selectedShowtime ? currencySymbol("USD") : "$";
   const displayCurrency = selectedShowtime?.payment_currency || "USD";
@@ -186,6 +220,7 @@ export default function Booking() {
         user_id: user.id,
         showtime_id: selectedShowtimeId,
         seat_ids: selectedSeats,
+        ...(activePromo && promoRate > 0 ? { promotion_id: Number(promoId) } : {}),
       });
       const data = res.data;
       const pay = data.payment;
@@ -278,7 +313,7 @@ export default function Booking() {
       <main className="flex-1 max-w-[1020px] w-full mx-auto p-7 flex flex-col gap-6">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3.5">
-            <span className="bg-[rgba(229,9,20,0.14)] text-[#e50914] border border-[rgba(229,9,20,0.3)] px-3 py-2 text-sm font-[800] rounded-[10px] shrink-0">Now Showing</span>
+            <span className="bg-[rgba(229,9,20,0.14)] text-[#e50914] border border-[rgba(229,9,20,0.3)] px-3 py-2 text-sm font-[800] rounded-[10px] shrink-0">Movies</span>
             <div>
               <h1 className="text-[26px] font-[800] max-md:text-[20px]">{movieName}</h1>
               <p className="text-[var(--app-mute)] text-sm mt-1">
@@ -290,6 +325,20 @@ export default function Booking() {
             <div className="text-[22px] font-[800] text-[#e50914] group/price">{renderPrice(selectedShowtime.price)} <span className="text-[13px] text-[var(--app-mute)] font-[600]">/ ticket</span></div>
           )}
         </div>
+
+        {activePromo && promoRate > 0 && (
+          <div className="flex items-center gap-3 bg-[rgba(34,197,94,0.12)] border border-[rgba(34,197,94,0.35)] text-[#1f9d55] rounded-2xl px-4 py-3.5">
+            <span className="w-10 h-10 rounded-xl bg-[#22c55e] text-white flex items-center justify-center shrink-0">
+              <BadgePercent size={18} />
+            </span>
+            <div className="min-w-0">
+              <div className="text-sm font-[800]">{activePromo.title}</div>
+              <div className="text-[12px] text-[var(--app-ink2)] font-[600]">
+                {promoRate}% OFF — applied automatically to your ticket total
+              </div>
+            </div>
+          </div>
+        )}
 
         {step === 0 && (
           <div className="bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-2xl p-[26px]">
@@ -455,6 +504,16 @@ export default function Booking() {
                   </b>
                 </div>
                 <div className="flex justify-between py-3 border-b border-[var(--app-edge)] text-sm gap-4"><span className="text-[var(--app-mute)]">Tickets</span><b className="text-[var(--app-ink)] text-right">{selectedSeats.length}</b></div>
+                {activePromo && promoRate > 0 && (
+                  <div className="flex justify-between py-3 border-b border-[var(--app-edge)] text-sm gap-4">
+                    <span className="text-[var(--app-mute)] flex items-center gap-1.5">
+                      <Ticket size={14} className="text-[#22c55e]" />
+                      {activePromo.title}
+                      <span className="text-[#22c55e] font-[800]">({promoRate}% off)</span>
+                    </span>
+                    <b className="text-[#22c55e] text-right">-{renderPrice(discountAmount)}</b>
+                  </div>
+                )}
                 <div className="flex justify-between pt-4 text-sm gap-4"><span className="font-[700] text-[var(--app-ink)]">Total</span><b className="text-[#e50914] text-[22px] text-right">{renderPrice(totalAmount)}</b></div>
               </div>
             </div>
@@ -538,6 +597,12 @@ export default function Booking() {
 
             <div className="flex gap-3 mt-6 justify-center col-span-full max-md:col-span-1">
               <button className="bg-transparent text-[var(--app-ink2)] border border-[var(--app-edge2)] cursor-pointer px-[22px] py-3 text-sm font-[700] rounded-xl transition-all duration-200 hover:bg-[var(--app-fill)] hover:border-[var(--app-edge2)]" onClick={() => navigate("/")}>Back to Home</button>
+              <button
+                className="bg-[rgba(229,9,20,0.12)] text-[#e50914] border border-[rgba(229,9,20,0.3)] cursor-pointer px-[22px] py-3 text-sm font-[700] rounded-xl transition-all duration-200 hover:bg-[rgba(229,9,20,0.2)]"
+                onClick={() => navigate("/my-bookings")}
+              >
+                View My Bookings
+              </button>
               <button
                 className="bg-[rgba(229,9,20,0.12)] text-[#e50914] border border-[rgba(229,9,20,0.3)] cursor-pointer px-[22px] py-3 text-sm font-[700] rounded-xl transition-all duration-200 hover:bg-[rgba(229,9,20,0.2)]"
                 onClick={() => {

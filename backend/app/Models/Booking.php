@@ -11,8 +11,11 @@ class Booking extends Model
     protected $fillable = [
         'user_id',
         'showtime_id',
+        'promotion_id',
         'booking_code',
         'total_amount',
+        'discount_amount',
+        'payment_method',
         'status',
         'payment_md5',
         'payment_qr',
@@ -28,6 +31,11 @@ class Booking extends Model
     public function showtime(): BelongsTo
     {
         return $this->belongsTo(Showtime::class);
+    }
+
+    public function promotion(): BelongsTo
+    {
+        return $this->belongsTo(Promotion::class);
     }
 
     public function bookingSeats(): HasMany

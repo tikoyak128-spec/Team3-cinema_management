@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../../../../api/client";
+import api, { buildFormData } from "../../../../api/client";
 import { usePrefs } from "../../../../context/PrefsContext";
 
 export default function MovieCreate() {
@@ -8,8 +8,11 @@ export default function MovieCreate() {
   const { t } = usePrefs();
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState({
-    title: "", movie_category_id: "", description: "", duration: "", release_date: "", poster: "", trailer_url: "",
+    title: "", movie_category_id: "", description: "", duration: "", release_date: "",
+    poster: "", poster_file: null, trailer_url: "", trailer_file: null,
   });
+  const [posterPreview, setPosterPreview] = useState(null);
+  const [trailerPreview, setTrailerPreview] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -19,20 +22,39 @@ export default function MovieCreate() {
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
+  const setFile = (k) => (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setForm((prev) => ({ ...prev, [k]: file, [`${k.replace("_file", "")}_file`]: file }));
+    if (k === "poster_file") {
+      setPosterPreview(URL.createObjectURL(file));
+    }
+    if (k === "trailer_file") {
+      setTrailerPreview(URL.createObjectURL(file));
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setError("");
     try {
-      await api.post("/movies", {
+      const payload = buildFormData({
         title: form.title,
         movie_category_id: form.movie_category_id,
         description: form.description,
         duration: form.duration ? parseInt(form.duration) : 0,
         release_date: form.release_date,
-        poster: form.poster || "https://via.placeholder.com/300x450",
+        poster: form.poster || null,
+        poster_file: form.poster_file,
         trailer_url: form.trailer_url || null,
+        trailer_file: form.trailer_file,
       });
+
+      if (form.poster_file) payload.delete("poster");
+      if (!form.poster_file && !form.poster) payload.set("poster", "https://via.placeholder.com/300x450");
+
+      await api.post("/movies", payload);
       navigate("/admin/movies");
     } catch (err) {
       const errors = err?.response?.data?.errors;
@@ -80,12 +102,36 @@ export default function MovieCreate() {
 
           <div className="flex flex-col gap-[7px] col-span-full max-sm:col-span-1">
             <label className="text-[13px] font-bold text-[var(--app-ink2)]">{t("adminMovieForm.posterUrl")}</label>
-            <input className="bg-[var(--app-panel2)] border border-[var(--app-edge)] rounded-xl py-3 px-3.5 text-[var(--app-ink)] font-inherit text-[14px] outline-none transition-colors duration-200 focus:border-[#e50914]" type="url" placeholder={t("adminMovieForm.posterPh")} value={form.poster} onChange={set("poster")} />
+            <input className="bg-[var(--app-panel2)] border border-[var(--app-edge)] rounded-xl py-3 px-3.5 text-[var(--app-ink)] font-inherit text-[14px] outline-none transition-colors duration-200 focus:border-[#e50914]" type="file" accept="image/*" onChange={setFile("poster_file")} />
+            {posterPreview && (
+              <div className="flex items-center gap-3 mt-2">
+                <img src={posterPreview} alt="Poster preview" className="w-16 h-24 object-cover rounded-lg border border-[var(--app-edge)]" />
+                <button type="button" className="text-[12px] text-[#e50914] font-bold bg-transparent border-none cursor-pointer" onClick={() => { setForm((prev) => ({ ...prev, poster_file: null })); setPosterPreview(null); }}>{t("common.remove") ?? "Remove"}</button>
+              </div>
+            )}
+            {!posterPreview && (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[12px] text-[var(--app-mute)]">{t("adminMovieForm.orUseUrl") ?? "Or paste a URL instead"}</span>
+                <input className="bg-[var(--app-panel2)] border border-[var(--app-edge)] rounded-xl py-3 px-3.5 text-[var(--app-ink)] font-inherit text-[14px] outline-none transition-colors duration-200 focus:border-[#e50914]" type="url" placeholder={t("adminMovieForm.posterPh")} value={form.poster} onChange={set("poster")} />
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col gap-[7px] col-span-full max-sm:col-span-1">
             <label className="text-[13px] font-bold text-[var(--app-ink2)]">{t("adminMovieForm.trailerUrl")}</label>
-            <input className="bg-[var(--app-panel2)] border border-[var(--app-edge)] rounded-xl py-3 px-3.5 text-[var(--app-ink)] font-inherit text-[14px] outline-none transition-colors duration-200 focus:border-[#e50914]" type="url" placeholder={t("adminMovieForm.trailerPh")} value={form.trailer_url} onChange={set("trailer_url")} />
+            <input className="bg-[var(--app-panel2)] border border-[var(--app-edge)] rounded-xl py-3 px-3.5 text-[var(--app-ink)] font-inherit text-[14px] outline-none transition-colors duration-200 focus:border-[#e50914]" type="file" accept="video/*" onChange={setFile("trailer_file")} />
+            {trailerPreview && (
+              <div className="flex items-center gap-3 mt-2">
+                <video src={trailerPreview} controls className="w-48 h-28 object-cover rounded-lg border border-[var(--app-edge)]" />
+                <button type="button" className="text-[12px] text-[#e50914] font-bold bg-transparent border-none cursor-pointer" onClick={() => { setForm((prev) => ({ ...prev, trailer_file: null })); setTrailerPreview(null); }}>{t("common.remove") ?? "Remove"}</button>
+              </div>
+            )}
+            {!trailerPreview && (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[12px] text-[var(--app-mute)]">{t("adminMovieForm.orUseUrl") ?? "Or paste a URL instead"}</span>
+                <input className="bg-[var(--app-panel2)] border border-[var(--app-edge)] rounded-xl py-3 px-3.5 text-[var(--app-ink)] font-inherit text-[14px] outline-none transition-colors duration-200 focus:border-[#e50914]" type="url" placeholder={t("adminMovieForm.trailerPh")} value={form.trailer_url} onChange={set("trailer_url")} />
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col gap-[7px] col-span-full max-sm:col-span-1">

@@ -4,7 +4,6 @@ const api = axios.create({
   baseURL: "/api",
   headers: {
     Accept: "application/json",
-    "Content-Type": "application/json",
   },
 });
 
@@ -20,7 +19,23 @@ api.interceptors.request.use((config) => {
       // ignore malformed storage
     }
   }
+  if (config.data instanceof FormData) {
+    delete config.headers["Content-Type"];
+  }
   return config;
 });
+
+export function buildFormData(payload) {
+  const formData = new FormData();
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+    if (Array.isArray(value)) {
+      value.forEach((v) => formData.append(`${key}[]`, v));
+    } else {
+      formData.append(key, value);
+    }
+  });
+  return formData;
+}
 
 export default api;

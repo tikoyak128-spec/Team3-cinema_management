@@ -2,9 +2,12 @@ import { useNavigate } from "react-router-dom";
 import { usePrefs } from "../context/PrefsContext";
 import { Play } from "lucide-react";
 
-export default function MovieCard({ movie }) {
+export default function MovieCard({ movie, promo }) {
   const navigate = useNavigate();
   const { t } = usePrefs();
+  const bookPath = promo
+    ? `/booking/${encodeURIComponent(movie.title)}?promo=${promo}`
+    : `/booking/${encodeURIComponent(movie.title)}`;
 
   return (
     <div className="group flex flex-col bg-[var(--app-panel)] shadow-red-100 dark:shadow-red-900/50 rounded-xl sm:rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-[0_16px_30px_rgba(0,0,0,0.5)]">
@@ -31,7 +34,7 @@ export default function MovieCard({ movie }) {
           </button>
           <button
             className="flex-1 text-[11px] sm:text-[12px] md:text-[13px] font-bold px-2 py-2 sm:py-2.5 rounded-lg sm:rounded-[10px] border border-[var(--app-edge2)] text-[var(--app-ink2)] hover:text-white cursor-pointer transition-all whitespace-nowrap hover:bg-brand hover:border-brand"
-            onClick={() => navigate(`/booking/${encodeURIComponent(movie.title)}`)}
+            onClick={() => navigate(bookPath)}
           >
             {t("nowShowing.tickets")}
           </button>

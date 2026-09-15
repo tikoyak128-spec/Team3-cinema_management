@@ -29,8 +29,14 @@ export default function CinemaLogin() {
   const goAfterLogin = (role) => {
     const redirect = searchParams.get("redirect");
     if (redirect) {
-      navigate(redirect, { replace: true });
-      return;
+      const isOwnArea =
+        (role === "admin" && redirect.startsWith("/admin")) ||
+        (role === "staff" && redirect.startsWith("/staff")) ||
+        (role === "customer" && !redirect.startsWith("/admin") && !redirect.startsWith("/staff"));
+      if (isOwnArea) {
+        navigate(redirect, { replace: true });
+        return;
+      }
     }
     if (role === "admin") navigate("/admin/dashboard", { replace: true });
     else if (role === "staff") navigate("/staff/dashboard", { replace: true });
@@ -221,10 +227,6 @@ export default function CinemaLogin() {
         <Link to="/register" className="text-brand font-bold no-underline hover:underline">
           {t("auth.createAccount")}
         </Link>
-      </p>
-
-      <p className="mt-5 text-center text-[11px] text-[var(--app-mute)] leading-relaxed">
-        {t("auth.demoHint")}
       </p>
     </AuthShell>
   );

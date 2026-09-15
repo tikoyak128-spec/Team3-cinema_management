@@ -44,9 +44,39 @@ const salesRows = [
   { date: "2026-08-26", bookings: 200, tickets: 288, revenue: "$3,540", refunds: "$30", status: "Open" },
 ];
 
+function downloadCsv(fileName, rows) {
+  if (!rows.length) return;
+  const headers = Object.keys(rows[0]);
+  const csv = [
+    headers.join(","),
+    ...rows.map((r) =>
+      headers.map((h) => `"${String(r[h]).replace(/"/g, '""')}"`).join(",")
+    ),
+  ].join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export default function Reports() {
   const { t } = usePrefs();
   const [period, setPeriod] = useState("Last 7 days");
+
+  const handleExportCsv = () => {
+    downloadCsv(
+      `sales-summary-${salesRows[0]?.date}.csv`,
+      salesRows.map((r) => ({
+        ...r,
+        status: t(r.status === "Closed" ? "adminReports.closed" : "adminReports.open"),
+      }))
+    );
+  };
 
   return (
     <div className="flex flex-col gap-6 text-[var(--app-ink)] [&_*]:box-border">
@@ -59,7 +89,7 @@ export default function Reports() {
           <button className="inline-flex items-center gap-2 border-none cursor-pointer font-inherit py-[11px] px-5 text-[14px] font-bold rounded-xl transition-all duration-200 bg-transparent text-[var(--app-ink2)] border border-[var(--app-edge2)] hover:bg-[var(--app-fill)] hover:border-[var(--app-edge2)]">
             <CalendarDays size={16} /> {t("adminReports.schedule")}
           </button>
-          <button className="inline-flex items-center gap-2 border-none cursor-pointer font-inherit py-[11px] px-5 text-[14px] font-bold rounded-xl transition-all duration-200 bg-[#e50914] text-white shadow-[0_4px_14px_rgba(229,9,20,0.35)] hover:bg-[#f40612] hover:-translate-y-px">
+          <button onClick={handleExportCsv} className="inline-flex items-center gap-2 border-none cursor-pointer font-inherit py-[11px] px-5 text-[14px] font-bold rounded-xl transition-all duration-200 bg-[#e50914] text-white shadow-[0_4px_14px_rgba(229,9,20,0.35)] hover:bg-[#f40612] hover:-translate-y-px">
             <Download size={16} /> {t("adminReports.exportCsv")}
           </button>
         </div>

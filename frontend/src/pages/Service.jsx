@@ -110,6 +110,7 @@ export default function Service() {
         badge={t("service.heroBadge")}
         title={t("service.heroTitle")}
         desc={t("service.heroDesc")}
+        image="https://wallpapercave.com/wp/wp4016036.jpg"
       />
 
       {/* Services Grid */}

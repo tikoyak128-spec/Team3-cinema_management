@@ -9,7 +9,6 @@ import {
   Compass,
   DoorOpen,
   FolderOpen,
-  Palette,
   Settings,
   Tag,
   Ticket,
@@ -110,12 +109,6 @@ export const adminNavSections = [
         nameKey: "admin.users",
         icon: Users,
         path: "/admin/users",
-      },
-      {
-        name: "Preferences",
-        nameKey: "admin.preferences",
-        icon: Palette,
-        path: "/admin/preferences",
       },
       {
         name: "Profile",
