@@ -8,7 +8,6 @@ const navKeyMap = {
   "/about": "nav.about",
   "/services": "nav.services",
   "/now-showing": "nav.nowShowing",
-  "/coming-soon": "nav.comingSoon",
   "/cinemas": "nav.cinemas",
   "/promotions": "nav.promotions",
 };
@@ -29,13 +28,13 @@ const contactItems = [
   {
     icon: MapPin,
     label: "footer.headOffice",
-    value: "Phnom Penh, Cambodia",
+    valueKey: "footer.addressValue",
     href: "https://maps.google.com/?q=Phnom+Penh+Cambodia",
   },
   {
     icon: Clock,
     label: "footer.openHours",
-    value: "Mon – Sun, 09:00 – 21:00",
+    valueKey: "footer.openHoursValue",
   },
 ];
 
@@ -66,8 +65,8 @@ const socials = [
 export default function Footer() {
   const { t } = usePrefs();
   return (
-    <footer className="bg-white/90 dark:bg-[var(--app-deep)] border-t border-[var(--app-edge)]">
-      <div className="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8 pt-12 sm:pt-16 pb-8">
+    <footer className="bg-white/90 dark:bg-black border-t border-[var(--app-edge)]">
+      <div className="max-w-[1024px] mx-auto px-5 sm:px-6 lg:px-8 pt-12 sm:pt-16 pb-8">
         {/* Top grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1.4fr] gap-10 sm:gap-8 mb-12">
           {/* Brand */}
@@ -152,8 +151,13 @@ export default function Footer() {
                     <span className="w-8 h-8 shrink-0 rounded-xl bg-brand/15 flex items-center justify-center transition-all group-hover:bg-brand">
                       <item.icon size={15} className="text-brand group-hover:text-white transition-colors" />
                     </span>
-                    <span className="text-xs sm:text-[13px] text-[var(--app-mute)] group-hover:text-brand transition-colors">
-                      {item.value}
+                    <span className="flex flex-col leading-tight">
+                      <span className="text-[10px] uppercase tracking-wide text-brand/80 transition-colors group-hover:text-brand">
+                        {t(item.label)}
+                      </span>
+                      <span className="text-xs sm:text-[13px] text-[var(--app-ink)] group-hover:text-brand transition-colors">
+                        {item.valueKey ? t(item.valueKey) : item.value}
+                      </span>
                     </span>
                   </Wrapper>
                 );

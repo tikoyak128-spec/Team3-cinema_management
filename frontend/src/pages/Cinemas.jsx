@@ -6,6 +6,7 @@ import { normalizeCinema, defaultCinemaImage } from "../utils/cinemaFormat";
 import { cinemas as fallbackCinemas } from "../data/cinemaData";
 import api from "../api/client";
 import { usePrefs } from "../context/PrefsContext";
+import useHeroImage from "../hooks/useHeroImage";
 import {
   Phone,
   Clock,
@@ -37,7 +38,7 @@ function FeaturedCinema({ cinema }) {
   return (
     <div className="group overflow-hidden rounded-3xl border border-[var(--app-edge)] bg-[linear-gradient(135deg,var(--app-panel),var(--app-panel2))] transition-all hover:border-brand/40 hover:shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
       <div className="grid grid-cols-1 md:grid-cols-[1.15fr_1fr]">
-        <div className="relative min-h-[260px] md:min-h-[340px] overflow-hidden">
+        <div className="relative min-h-[240px] md:min-h-[300px] overflow-hidden">
           <img
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-[700ms] group-hover:scale-105"
             src={cinema.image}
@@ -106,6 +107,10 @@ function FeaturedCinema({ cinema }) {
 
 export default function Cinemas() {
   const { t } = usePrefs();
+  const heroImage = useHeroImage(
+    "cinemas",
+    "https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=800&h=1200&fit=crop"
+  );
   const [rawCinemas, setRawCinemas] = useState([]);
   const [currentSlide, setCurrentSlide] = useState(0);
   const timerRef = useRef(null);
@@ -163,14 +168,15 @@ export default function Cinemas() {
   return (
     <>
       <HeroBanner
+        split
         badge={t("cinemas.heroBadge")}
-        title={t("nav.cinemas")}
+        title={t("cinemas.heroTitle")}
         desc={t("cinemas.heroDesc")}
-        image="https://p.turbosquid.com/ts-thumb/2s/uqdk64/ZH/r6/jpg/1684313993/1920x1080/fit_q87/26e0e3c7ae76f875dd9553ffd5d6e3ccda6dd999/r6.jpg"
+        image={heroImage}
       />
 
       {/* Stats strip */}
-      <section className="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8 pt-10">
+      <section className="max-w-[1024px] mx-auto px-5 sm:px-6 lg:px-8 pt-10">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {stats.map((stat) => (
             <div
@@ -190,7 +196,7 @@ export default function Cinemas() {
       </section>
 
       {/* Image slider */}
-      <section className="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8 pt-12">
+      <section className="max-w-[1024px] mx-auto px-5 sm:px-6 lg:px-8 pt-12">
         <div className="flex items-end justify-between mb-6 flex-wrap gap-3">
           <div>
             <h2 className="text-2xl md:text-3xl font-extrabold">{t("home.cinemaAction")}</h2>
@@ -231,7 +237,7 @@ export default function Cinemas() {
       </section>
 
       {/* Locations */}
-      <section className="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8 py-16 md:py-20" id="cinemas">
+      <section className="max-w-[1024px] mx-auto px-5 sm:px-6 lg:px-8 py-16 md:py-20" id="cinemas">
         <div className="flex items-end justify-between mb-9 flex-wrap gap-4">
           <div>
             <h2 className="text-[28px] md:text-[38px] font-black leading-tight">{t("cinemas.nearYou")}</h2>
@@ -255,7 +261,7 @@ export default function Cinemas() {
 
       {/* Amenities */}
       <section className="bg-[var(--app-deep)] border-y border-[var(--app-edge)]">
-        <div className="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8 py-14 md:py-16">
+        <div className="max-w-[1024px] mx-auto px-5 sm:px-6 lg:px-8 py-14 md:py-16">
           <div className="text-center mb-10">
             <h2 className="text-[26px] md:text-[34px] font-black mb-3">{t("cinemas.comfortTitle")}</h2>
             <p className="text-[15px] text-[var(--app-mute)] max-w-[520px] mx-auto">
@@ -274,28 +280,6 @@ export default function Cinemas() {
                 <span className="text-[12px] font-bold text-[var(--app-ink2)] leading-snug">{t(a.labelKey)}</span>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8 py-16 md:py-20">
-        <div className="relative overflow-hidden rounded-3xl border border-[var(--app-edge)] bg-[linear-gradient(135deg,var(--app-panel),var(--app-panel2))] p-10 sm:p-16 text-center">
-          <div className="absolute -top-28 -left-28 w-80 h-80 rounded-full bg-[rgba(229,9,20,0.15)] blur-[90px]" />
-          <div className="absolute -bottom-28 -right-28 w-80 h-80 rounded-full bg-[rgba(139,92,246,0.1)] blur-[90px]" />
-          <div className="relative z-10 flex flex-col items-center gap-5">
-            <h2 className="text-[28px] md:text-[40px] font-black leading-tight">
-              {t("cinemas.ctaTitle")}
-            </h2>
-            <p className="text-[15px] text-[var(--app-mute)] max-w-[480px]">
-              {t("cinemas.ctaText")}
-            </p>
-            <Link
-              to="/now-showing"
-              className="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-white text-sm font-bold px-8 py-3.5 rounded-full transition-all shadow-[0_4px_16px_rgba(229,9,20,0.35)] no-underline"
-            >
-              <Ticket size={15} /> {t("cinemas.browseNowShowing")}
-            </Link>
           </div>
         </div>
       </section>

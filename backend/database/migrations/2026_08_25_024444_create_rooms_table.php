@@ -6,25 +6,20 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('rooms', function (Blueprint $table) {
+        Schema::create('cinema_rooms', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('cinema_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('cinema_id')->constrained('cinemas')->cascadeOnDelete();
             $table->string('name');
+            $table->unsignedInteger('capacity')->default(0);
             $table->unsignedInteger('total_seats')->default(0);
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('rooms');
+        Schema::dropIfExists('cinema_rooms');
     }
 };

@@ -98,7 +98,7 @@ export default function AdminLayout({ children }) {
             : `shrink-0 border-r bg-gradient-to-b from-white to-[#f1f1f1] dark:from-[#111111] dark:to-[#0a0a0a] border-[rgba(0,0,0,0.1)] dark:border-dark-border ${compact ? "w-[94px]" : "w-[270px]"}`
         }`}
       >
-        <div className="flex h-screen flex-col overflow-y-auto overflow-x-hidden">
+        <div className="flex min-h-full flex-col overflow-y-auto overflow-x-hidden">
         <div className={`flex min-h-[70px] items-center gap-2 border-b px-[18px] border-[rgba(0,0,0,0.1)] dark:border-dark-border ${compact ? "justify-center" : "justify-between"}`}>
           <div className="flex cursor-pointer items-center gap-3 overflow-hidden whitespace-nowrap" onClick={() => navigate("/")}>
             {!compact && (
@@ -144,9 +144,12 @@ export default function AdminLayout({ children }) {
           {adminNavSections.map((section) => (
             <div key={section.label} className="mb-3">
               <div className={`flex items-center gap-2 px-3 pb-2 pt-1.5 text-[11px] font-bold uppercase tracking-[1.2px] text-muted ${compact ? "justify-center !px-0 !py-2" : ""}`}>
-                <span className="w-[26px] shrink-0 text-center"><section.icon size={17} strokeWidth={2.2} /></span>
-                {!compact && <span className="text-muted">{t(section.labelKey || section.label)}</span>}
-              </div>
+                  {compact ? (
+                    <span className="h-px w-8 bg-black/10 dark:bg-white/10" />
+                  ) : (
+                    <span className="text-muted">{t(section.labelKey || section.label)}</span>
+                  )}
+                </div>
               {section.items.map((item) => {
                 const isActive =
                   activePath === item.path ||
@@ -156,12 +159,16 @@ export default function AdminLayout({ children }) {
                 return (
                   <div key={item.name} className="mb-0.5 flex flex-col">
                     <button
-                      className={`relative flex w-full cursor-pointer items-center whitespace-nowrap rounded-[10px] px-3.5 py-[11px] text-left text-[14px] font-medium transition-all duration-200 ${
+                      className={`group relative flex w-full cursor-pointer items-center whitespace-nowrap rounded-[10px] px-3.5 py-[11px] text-left text-[14px] font-medium transition-all duration-200 ${
                         compact ? "justify-center !gap-0 !px-0 py-3" : "gap-3.5"
                       } ${
                         isActive
-                          ? "bg-gradient-to-br from-[rgba(229,9,20,0.15)] to-[rgba(229,9,20,0.05)] font-semibold text-brand before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[3px] before:rounded-r before:bg-brand"
-                          : "text-muted hover:bg-black/5 hover:text-[#1a1a1a] dark:hover:bg-white/5 dark:hover:text-[#f5f5f5]"
+                          ? compact
+                            ? "font-semibold text-brand"
+                            : "bg-gradient-to-br from-[rgba(229,9,20,0.15)] to-[rgba(229,9,20,0.05)] font-semibold text-brand before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[3px] before:rounded-r before:bg-brand"
+                          : compact
+                            ? "text-muted hover:text-[#1a1a1a] dark:hover:text-[#f5f5f5]"
+                            : "text-muted hover:bg-black/5 hover:text-[#1a1a1a] dark:hover:bg-white/5 dark:hover:text-[#f5f5f5]"
                       }`}
                       title={compact ? t(item.nameKey || item.name) : undefined}
                       onClick={() => {
@@ -172,7 +179,19 @@ export default function AdminLayout({ children }) {
                         }
                       }}
                     >
-                      <span className="flex w-[26px] shrink-0 justify-center"><item.icon size={22} strokeWidth={2} /></span>
+                      <span
+                        className={`shrink-0 ${
+                          compact
+                            ? `flex h-10 w-10 items-center justify-center rounded-lg border transition-all duration-200 ${
+                                isActive
+                                  ? "border-brand/50 text-brand"
+                                  : "border-transparent text-current group-hover:border-brand/40 group-hover:text-brand group-hover:bg-black/5 dark:group-hover:bg-white/10"
+                              }`
+                            : "flex w-[26px] justify-center"
+                        }`}
+                      >
+                        <item.icon size={22} strokeWidth={2} />
+                      </span>
                       {!compact && <span className="flex-1">{t(item.nameKey || item.name)}</span>}
                       {!compact && item.children && (
                         <span className={`inline-block text-[16px] font-bold text-muted transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`}>
@@ -216,7 +235,7 @@ export default function AdminLayout({ children }) {
             className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors duration-200 bg-[rgba(0,0,0,0.03)] dark:bg-[rgba(255,255,255,0.03)] border-[rgba(0,0,0,0.1)] dark:border-dark-border hover:border-[rgba(229,9,20,0.3)] ${compact ? "justify-center" : ""}`}
             onClick={() => setProfileOpen((p) => !p)}
           >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand/10 text-[13px] font-bold text-brand">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-brand/10 text-[13px] font-bold text-brand">
               {user?.avatar ? (
                 <img src={user.avatar} alt={user?.name} className="h-full w-full object-cover" />
               ) : (
@@ -285,7 +304,7 @@ export default function AdminLayout({ children }) {
               {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
             <div onClick={() => handleNav("/admin/profile")} className="ml-1.5 flex cursor-pointer items-center gap-2.5 rounded-[10px] border px-3 py-1.5 transition-colors duration-200 bg-[rgba(0,0,0,0.03)] dark:bg-[rgba(255,255,255,0.03)] border-[rgba(0,0,0,0.1)] dark:border-dark-border hover:bg-black/5 dark:hover:bg-white/5" title={t("admin.myProfile")}>
-              <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-brand/10 text-[11px] font-bold text-brand">
+              <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-lg bg-brand/10 text-[11px] font-bold text-brand">
                 {user?.avatar ? (
                   <img src={user.avatar} alt={user?.name} className="h-full w-full object-cover" />
                 ) : (

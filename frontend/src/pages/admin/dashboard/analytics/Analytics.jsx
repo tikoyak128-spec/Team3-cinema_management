@@ -72,12 +72,42 @@ const dailyBookings = [
   { date: "2026-09-01", bookings: 196, tickets: 278, occupancy: "63%", revenue: "$3,610", status: "Pending" },
 ];
 
+function downloadCsv(fileName, rows) {
+  if (!rows.length) return;
+  const headers = Object.keys(rows[0]);
+  const csv = [
+    headers.join(","),
+    ...rows.map((r) =>
+      headers.map((h) => `"${String(r[h]).replace(/"/g, '""')}"`).join(",")
+    ),
+  ].join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export default function Analytics() {
   const { t } = usePrefs();
   const [period, setPeriod] = useState("This Week");
   const series = revenueSeries[period];
   const total = 100;
   const maxBar = Math.max(...cinemaBars.map((c) => c.value));
+
+  const handleExportCsv = () => {
+    downloadCsv(
+      `analytics-${period.toLowerCase().replace(/\s+/g, "-")}.csv`,
+      dailyBookings.map((r) => ({
+        ...r,
+        status: t(r.status === "Completed" ? "adminAnalytics.completed" : "adminAnalytics.pending"),
+      }))
+    );
+  };
 
   return (
     <div className="flex flex-col gap-6 text-[var(--app-ink)] [&_*]:box-border">
@@ -91,14 +121,18 @@ export default function Analytics() {
             {periods.map((p) => (
               <button
                 key={p}
-                className={`border-none bg-transparent text-[var(--app-mute)] font-inherit text-[13px] font-semibold py-2 px-3.5 rounded-[9px] cursor-pointer transition-all duration-200 hover:text-[var(--app-ink)] ${period === p ? "bg-[#e50914] text-white shadow-[0_4px_12px_rgba(229,9,20,0.35)]" : ""}`}
+                className={`border-none bg-transparent font-inherit text-[13px] font-semibold py-2 px-3.5 rounded-[9px] cursor-pointer transition-all duration-200 ${
+                  period === p
+                    ? "bg-[#e50914] text-gray-800 dark:text-white shadow-[0_4px_12px_rgba(229,9,20,0.35)]"
+                    : "text-[var(--app-mute)] hover:text-[var(--app-ink)]"
+                }`}
                 onClick={() => setPeriod(p)}
               >
                 {t(periodKey[p])}
               </button>
             ))}
           </div>
-          <button className="inline-flex items-center gap-2 border-none cursor-pointer font-inherit py-[11px] px-5 text-[14px] font-bold rounded-xl transition-all duration-200 bg-[#e50914] text-white shadow-[0_4px_14px_rgba(229,9,20,0.35)] hover:bg-[#f40612] hover:-translate-y-px">
+          <button onClick={handleExportCsv} className="inline-flex items-center gap-2 border-none cursor-pointer font-inherit py-[11px] px-5 text-[14px] font-bold rounded-xl transition-all duration-200 bg-[#e50914] text-white shadow-[0_4px_14px_rgba(229,9,20,0.35)] hover:bg-[#f40612] hover:-translate-y-px">
             <Download size={16} /> {t("adminAnalytics.export")}
           </button>
         </div>

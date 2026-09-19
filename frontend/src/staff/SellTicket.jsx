@@ -13,13 +13,14 @@ import {
   ScanLine,
   ShoppingCart,
   Ticket,
+  TriangleAlert,
   User,
   Wallet,
   X,
 } from "lucide-react";
 import api from "../api/client";
 import { usePrefs } from "../context/PrefsContext";
-import { QRCodeSVG } from "qrcode.react";
+import PaymentModal from "../components/PaymentModal";
 
 const segColors = (t) =>
   t === "vip"
@@ -65,6 +66,8 @@ export default function SellTicket() {
   const [pendingPayment, setPendingPayment] = useState(null);
   const [paymentStatus, setPaymentStatus] = useState("");
   const [paymentError, setPaymentError] = useState("");
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [checking, setChecking] = useState(false);
   const pollRef = useRef(null);
 
   useEffect(() => {
@@ -97,7 +100,7 @@ export default function SellTicket() {
     if (!pendingBooking?.id) return;
     pollRef.current = setInterval(() => {
       checkPendingPayment();
-    }, 3000);
+    }, 15000);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
@@ -226,6 +229,7 @@ export default function SellTicket() {
         setPendingPayment(data.payment);
         setPaymentStatus("pending");
         setPaymentError("");
+        setShowPaymentModal(true);
         return;
       }
       setResult(data);
@@ -241,6 +245,7 @@ export default function SellTicket() {
 
   const checkPendingPayment = async () => {
     if (!pendingBooking?.id) return;
+    setChecking(true);
     try {
       const { data } = await api.get(`/bookings/${pendingBooking.id}/payment`);
       setPaymentStatus(data.payment_status);
@@ -249,10 +254,39 @@ export default function SellTicket() {
         setPendingBooking(null);
         setPendingPayment(null);
         setPaymentError("");
+        setShowPaymentModal(false);
         setResult(data.booking);
+        return;
+      }
+      if (data.verification_error) {
+        if (pollRef.current) clearInterval(pollRef.current);
+        setPaymentError(data.message || "Could not verify payment automatically.");
       }
     } catch (err) {
       setPaymentError(err?.response?.data?.message || "Could not check payment.");
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const confirmPendingPayment = async () => {
+    if (!pendingBooking?.id) return;
+    setSubmitting(true);
+    setPaymentError("");
+    try {
+      const { data } = await api.post(`/staff/bookings/${pendingBooking.id}/confirm-payment`);
+      if (data.payment_status === "confirmed") {
+        if (pollRef.current) clearInterval(pollRef.current);
+        setPendingBooking(null);
+        setPendingPayment(null);
+        setPaymentError("");
+        setShowPaymentModal(false);
+        setResult(data.booking);
+      }
+    } catch (err) {
+      setPaymentError(err?.response?.data?.message || "Could not confirm payment.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -262,6 +296,7 @@ export default function SellTicket() {
     setPendingPayment(null);
     setPaymentStatus("");
     setPaymentError("");
+    setShowPaymentModal(false);
   };
 
   const reset = () => {
@@ -271,6 +306,7 @@ export default function SellTicket() {
     setPendingPayment(null);
     setPaymentStatus("");
     setPaymentError("");
+    setShowPaymentModal(false);
     setCinemaId("");
     setMovieId("");
     setRoomId("");
@@ -334,43 +370,41 @@ export default function SellTicket() {
         </div>
       ) : pendingBooking && pendingPayment ? (
         <div className="bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-2xl p-6">
-          <h2 className="text-lg font-extrabold mb-4 flex items-center gap-2"><ScanLine size={18} /> {t("staff.payWithBakong")}</h2>
-          <div className="flex flex-col items-center gap-3.5 mt-1.5">
-            <div className="bg-white rounded-[14px] p-5 flex flex-col items-center gap-3.5 max-[600px]:p-3.5">
-              <div className="flex items-center gap-2 text-[#111] text-[13px] font-[800]"><ScanLine size={16} /> {t("staff.scanWithBakong")}</div>
-              <QRCodeSVG value={pendingPayment.qr} size={220} level="M" />
-              <div className="text-[#111] text-[20px] font-[800] flex flex-col items-center gap-0.5">
-                ${Number(pendingPayment.amount).toFixed(2)}
-                <span className="text-[#666] text-xs font-[600]">Merchant: Khmer Cinema</span>
-                {pendingPayment.expires_at && (
-                  <span className="text-[#666] text-xs font-[600]">{t("staff.paymentExpires")} {new Date(pendingPayment.expires_at).toLocaleTimeString()}</span>
-                )}
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <span className="w-12 h-12 rounded-2xl bg-brand/10 border border-brand/25 text-brand flex items-center justify-center shrink-0">
+                <ScanLine size={22} />
+              </span>
+              <div>
+                <h2 className="text-lg font-extrabold">{t("staff.payWithBakong")}</h2>
+                <p className="text-[13px] text-[var(--app-mute)] mt-0.5">
+                  {t("staff.booking")} <b className="text-[var(--app-ink)]">{pendingBooking.booking_code}</b> · <b className="text-[#e50914]">${Number(pendingPayment.amount).toFixed(2)}</b>
+                </p>
               </div>
             </div>
-
-            {paymentStatus === "pending" && (
-              <div className="flex items-start gap-2.5 bg-[rgba(34,197,94,0.1)] border border-[rgba(34,197,94,0.25)] text-[#6ee7a8] px-3.5 py-3 rounded-[10px] text-[13px] font-[600] leading-relaxed">
-                <Loader2 className="animate-spin shrink-0" size={16} />
-                <span>{t("staff.waitingPayment")}</span>
-              </div>
-            )}
-
-            {paymentError && (
-              <div className="flex items-start gap-2.5 bg-[rgba(229,9,20,0.1)] border border-[rgba(229,9,20,0.3)] text-[#f87171] px-3.5 py-3 rounded-[10px] text-[13px] font-[600] leading-relaxed">
-                <Loader2 size={16} className="shrink-0" />
-                <span>{paymentError}</span>
-              </div>
-            )}
-
-            <div className="flex items-center gap-3 flex-wrap justify-center">
-              <button onClick={checkPendingPayment} disabled={submitting} className="inline-flex items-center gap-2 border-none cursor-pointer py-[11px] px-5 text-sm font-bold rounded-xl transition-all duration-200 bg-[#e50914] text-white shadow-[0_4px_14px_rgba(229,9,20,0.35)] hover:bg-[#f40612] hover:-translate-y-0.5 disabled:opacity-50">
-                <ScanLine size={16} /> {t("staff.checkPayment")}
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <button onClick={() => setShowPaymentModal(true)} className="inline-flex items-center gap-2 border-none cursor-pointer py-[11px] px-5 text-sm font-bold rounded-xl transition-all duration-200 bg-[#e50914] text-white shadow-[0_4px_14px_rgba(229,9,20,0.35)] hover:bg-[#f40612] hover:-translate-y-0.5">
+                <ScanLine size={16} /> {t("staff.scanWithBakong")}
               </button>
               <button onClick={cancelPending} className="inline-flex items-center gap-2 cursor-pointer py-[11px] px-5 text-sm font-bold rounded-xl transition-all duration-200 bg-[var(--app-fill)] border border-[var(--app-edge2)] text-[var(--app-mute)] hover:border-brand/40 hover:text-brand">
                 <X size={16} /> {t("staff.cancelPayment")}
               </button>
             </div>
           </div>
+
+          {paymentStatus === "pending" && (
+            <div className="mt-4 flex items-center gap-2.5 bg-[rgba(34,197,94,0.1)] border border-[rgba(34,197,94,0.25)] text-[#6ee7a8] px-3.5 py-3 rounded-[10px] text-[13px] font-[600] leading-relaxed">
+              <Loader2 className="animate-spin shrink-0" size={16} />
+              <span>{t("staff.waitingPayment")}</span>
+            </div>
+          )}
+
+          {paymentError && (
+            <div className="mt-4 flex items-start gap-2.5 bg-[rgba(229,9,20,0.1)] border border-[rgba(229,9,20,0.3)] text-[#f87171] px-3.5 py-3 rounded-[10px] text-[13px] font-[600] leading-relaxed">
+              <TriangleAlert size={16} className="shrink-0 mt-0.5" />
+              <span>{paymentError}</span>
+            </div>
+          )}
         </div>
       ) : (
         <>
@@ -595,6 +629,20 @@ export default function SellTicket() {
           )}
         </>
       )}
+
+      <PaymentModal
+        open={showPaymentModal}
+        payment={pendingPayment}
+        status={paymentStatus || "pending"}
+        error={paymentError}
+        checking={checking}
+        confirming={submitting}
+        bookingCode={pendingBooking?.booking_code}
+        onCheck={checkPendingPayment}
+        onConfirm={confirmPendingPayment}
+        confirmLabel="Confirm payment received"
+        onClose={() => setShowPaymentModal(false)}
+      />
     </div>
   );
 }

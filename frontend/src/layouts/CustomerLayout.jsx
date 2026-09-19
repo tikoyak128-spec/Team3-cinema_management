@@ -4,7 +4,7 @@ import Footer from "../components/Footer";
 
 export default function CustomerLayout() {
   return (
-    <div className="bg-[var(--app-page)] text-[var(--app-ink)] min-h-screen overflow-x-clip">
+    <div className="bg-gray-200 text-gray-900 dark:bg-dark dark:text-gray-300 min-h-screen overflow-x-clip">
       <Navbar />
       <Outlet />
       <Footer />

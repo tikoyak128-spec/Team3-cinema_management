@@ -12,7 +12,6 @@ const navKeyMap = {
   "/about": "nav.about",
   "/services": "nav.services",
   "/now-showing": "nav.nowShowing",
-  "/coming-soon": "nav.comingSoon",
   "/cinemas": "nav.cinemas",
   "/promotions": "nav.promotions",
 };
@@ -49,14 +48,8 @@ export default function Navbar() {
 
   return (
     <>
-      <header
-        className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 ${
-          scrolled
-            ? "bg-[var(--app-header)] backdrop-blur-2xl shadow-[0_1px_0_rgba(255,255,255,0.04),0_4px_24px_rgba(0,0,0,0.5)]"
-            : "bg-transparent"
-        }`}
-      >
-        <div className="max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 lg:h-[72px] flex items-center justify-between gap-3 sm:gap-4">
+      <header className="fixed top-0 left-0 right-0 z-[100] bg-white/70 dark:bg-[#1b1b1b]/70 backdrop-blur-2xl backdrop-saturate-150 transition-all duration-500">
+        <div className="w-full max-w-[1024px] mx-auto h-14 sm:h-16 lg:h-[72px] flex items-center justify-between gap-3 sm:gap-4 px-4 sm:px-6">
           {/* Logo */}
           <Link
             className="flex items-center gap-2.5 cursor-pointer shrink-0 no-underline group"
@@ -98,31 +91,24 @@ export default function Navbar() {
 
             {/* Book Tickets CTA - Desktop */}
             <Link
-              className="hidden sm:inline-flex items-center gap-1.5 bg-brand/10 hover:bg-brand/20 border border-brand/25 hover:border-brand/40 text-brand text-xs font-bold px-3.5 py-2 rounded-lg transition-all duration-200 no-underline"
+              className="hidden sm:inline-flex items-center justify-center gap-1.5 bg-brand/10 hover:bg-brand/20 border border-brand/25 hover:border-brand/40 text-brand text-xs font-bold px-2.5 py-2 sm:px-3 rounded-lg transition-all duration-200 no-underline"
               to="/my-bookings"
+              title={t("nav.myBookings")}
             >
-              <span className="hidden md:inline">{t("nav.myBookings")}</span>
+              <Ticket size={15} />
             </Link>
 
             {/* Auth section */}
             {isAuthenticated && user ? (
               <div className="hidden sm:flex items-center gap-2.5">
-                <Link className="flex items-center gap-2 pl-2 border-l border-[var(--app-edge)] no-underline group" to="/profile" title={t("nav.myProfile")}>
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-extrabold text-white bg-gradient-to-br from-brand to-red-700 ring-2 ring-[var(--app-edge)] ring-offset-1 ring-offset-[var(--app-header)] overflow-hidden">
+                <Link className="flex items-center pl-2 border-l border-[var(--app-edge)] no-underline group" to="/profile" title={t("nav.myProfile")}>
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-extrabold text-white bg-gradient-to-br from-brand to-red-700 ring-2 ring-[var(--app-edge)] ring-offset-1 ring-offset-[var(--app-header)] overflow-hidden">
                     {user.avatar ? (
                       <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
                     ) : (
                       (user.name || "U").charAt(0).toUpperCase()
                     )}
                   </div>
-                  <span className="hidden xl:flex flex-col leading-tight max-w-[120px] min-w-0">
-                    <span className="text-xs font-bold text-[var(--app-mute)] truncate group-hover:text-[var(--app-ink)] transition-colors">
-                      {user.name || user.email}
-                    </span>
-                    <span className="text-[10px] font-semibold text-brand capitalize truncate">
-                      {user.role || "customer"}
-                    </span>
-                  </span>
                 </Link>
                 <button
                   className="flex items-center gap-1.5 text-[var(--app-mute)] hover:text-[var(--app-ink)] text-xs font-semibold px-2.5 py-2 rounded-lg hover:bg-[var(--app-fill)] transition-all cursor-pointer"
@@ -139,12 +125,6 @@ export default function Navbar() {
                   onClick={() => navigate("/login")}
                 >
                   {t("nav.signIn")}
-                </button>
-                <button
-                  className="bg-brand hover:bg-brand-hover text-white text-xs sm:text-sm font-bold px-4 py-2 rounded-lg transition-all shadow-[0_2px_12px_rgba(229,9,20,0.35)] hover:shadow-[0_4px_20px_rgba(229,9,20,0.5)] hover:-translate-y-px cursor-pointer"
-                  onClick={() => navigate("/register")}
-                >
-                  {t("nav.signUp")}
                 </button>
               </div>
             )}
@@ -250,7 +230,7 @@ export default function Navbar() {
                   to="/profile"
                   onClick={closeMenu}
                 >
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-extrabold text-white bg-gradient-to-br from-brand to-red-700 ring-2 ring-[var(--app-edge)] overflow-hidden">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-extrabold text-white bg-gradient-to-br from-brand to-red-700 ring-2 ring-[var(--app-edge)] overflow-hidden">
                     {user.avatar ? (
                       <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
                     ) : (

@@ -3,8 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { usePrefs } from "../context/PrefsContext";
 import MovieCard from "../components/MovieCard";
 import CinemaCard from "../components/CinemaCard";
+import CustomerFeedback from "../components/CustomerFeedback";
 import { nowShowing, comingSoon, cinemas as fallbackCinemas } from "../data/cinemaData";
 import { normalizeCinema, defaultCinemaImage } from "../utils/cinemaFormat";
+import { normalizeMovie, nowShowingOf, comingSoonOf } from "../utils/movieFormat";
 import api from "../api/client";
 import { Play, X, ZoomIn, Ticket } from "lucide-react";
 
@@ -26,6 +28,7 @@ export default function Home() {
   const [heroFading, setHeroFading] = useState(false);
   const [selectedGalleryImage, setSelectedGalleryImage] = useState(null);
   const [dbCinemas, setDbCinemas] = useState([]);
+  const [dbMovies, setDbMovies] = useState([]);
   const timerRef = useRef(null);
 
   useEffect(() => {
@@ -43,7 +46,21 @@ export default function Home() {
     };
   }, []);
 
-  const heroMovies = nowShowing;
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get("/movies")
+      .then((res) => {
+        if (cancelled) return;
+        const list = (Array.isArray(res.data) ? res.data : []).map(normalizeMovie);
+        if (list.length > 0) setDbMovies(list);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const toDisplay = (c) => normalizeCinema(c, t);
   const list = dbCinemas.length > 0 ? dbCinemas.map(toDisplay) : fallbackCinemas;
   const slides = list.map((c) => ({
@@ -51,6 +68,18 @@ export default function Home() {
     caption: [c.name, c.area].filter(Boolean).join(" · "),
   }));
   const totalSlides = slides.length;
+
+  const nowList = nowShowingOf(dbMovies);
+  const soonList = comingSoonOf(dbMovies);
+  const movieList =
+    activeTab === "now-showing"
+      ? nowList.length > 0
+        ? nowList
+        : nowShowing
+      : soonList.length > 0
+        ? soonList
+        : comingSoon;
+  const heroMovies = nowList.length > 0 ? nowList : nowShowing;
 
   const goToNext = useCallback(() => {
     setCurrentSlide((prev) => (prev + 1) % totalSlides);
@@ -82,7 +111,6 @@ export default function Home() {
     }, 500);
   };
 
-  const movieList = activeTab === "now-showing" ? nowShowing : comingSoon;
   const heroMovie = heroMovies[heroIndex];
 
   return (
@@ -107,10 +135,10 @@ export default function Home() {
 
         {/* Decorative Glows */}
         <div className="absolute top-1/4 left-[10%] sm:left-[15%] w-[160px] h-[160px] sm:w-[320px] sm:h-[320px] md:w-[400px] md:h-[400px] rounded-full bg-[rgba(229,9,20,0.15)] blur-[80px] sm:blur-[100px] md:blur-[120px] pointer-events-none z-[1]" />
-        <div className="absolute bottom-1/3 right-[5%] sm:right-[10%] w-[140px] h-[140px] sm:w-[240px] sm:h-[240px] md:w-[300px] md:h-[300px] rounded-full bg-[rgba(120,20,200,0.1)] blur-[60px] sm:blur-[80px] md:blur-[100px] pointer-events-none z-[1]" />
+        <div className="absolute bottom-1/3 right-[5%] sm:right-[10%] w-[140px] h-[140px] sm:w-[240px] sm:h-[240px] md:w-[300px] md:h-[300px] rounded-full bg-[rgba(237,195,143,0.12)] blur-[60px] sm:blur-[80px] md:blur-[100px] pointer-events-none z-[1]" />
 
         {/* Content */}
-        <div className="relative z-[2] w-full max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8 pt-16 sm:pt-20 md:pt-28 lg:pt-32 pb-20 sm:pb-24 md:pb-24">
+        <div className="relative z-[2] w-full max-w-[1024px] mx-auto px-5 sm:px-6 lg:px-8 pt-16 sm:pt-20 md:pt-28 lg:pt-32 pb-20 sm:pb-24 md:pb-24">
           <h1 className={`text-[26px] min-[400px]:text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-black leading-[1.08] tracking-tight text-balance mb-3 sm:mb-4 text-white transition-all duration-500 delay-75 ${heroFading ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"}`}>{heroMovie.title}</h1>
 
           <div className={`flex flex-wrap items-center gap-x-2 sm:gap-x-3 md:gap-x-4 gap-y-1.5 sm:gap-y-2 mb-3 sm:mb-4 md:mb-5 transition-all duration-500 delay-150 ${heroFading ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"}`}>
@@ -171,8 +199,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ===== ABOUT SECTION ===== */}
-      <section className="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8 py-14 sm:py-16 md:py-20 scroll-mt-20" id="about">
+      <section className="max-w-[1024px] mx-auto px-5 sm:px-6 lg:px-8 py-14 sm:py-16 md:py-20 scroll-mt-20" id="about">
         <div className="grid grid-cols-1 md:grid-cols-[1.2fr_1fr] gap-8 sm:gap-10 lg:gap-16 items-center">
           <div>
            <h2 className="text-[24px] sm:text-3xl md:text-[42px] font-black leading-[1.15] mb-4">
@@ -211,7 +238,7 @@ export default function Home() {
       </section>
 
       {/* ===== IMAGE SLIDER ===== */}
-      <section className="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8 pt-0 pb-14 sm:pb-16 md:pb-20">
+      <section className="max-w-[1024px] mx-auto px-5 sm:px-6 lg:px-8 pt-0 pb-14 sm:pb-16 md:pb-20">
         <div className="flex items-end justify-between mb-6 flex-wrap gap-3">
           <div>
             <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold">{t("home.cinemaAction")}</h2>
@@ -251,7 +278,7 @@ export default function Home() {
       </section>
 
       {/* ===== GALLERY ===== */}
-      <section className="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8 py-14 sm:py-16 md:py-20 scroll-mt-20" id="gallery">
+      <section className="max-w-[1024px] mx-auto px-5 sm:px-6 lg:px-8 py-14 sm:py-16 md:py-20 scroll-mt-20" id="gallery">
         <div className="text-center mb-10 sm:mb-12">
           <h2 className="text-2xl sm:text-3xl md:text-[42px] font-black leading-[1.15]">
             {t("home.galleryTitle")}
@@ -367,28 +394,36 @@ export default function Home() {
       )}
 
       {/*  NOW SHOWING / COMING SOON */}
-      <section className="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8 py-14 sm:py-16 md:py-20 scroll-mt-20" id="showtimes">
+      <section className="max-w-[1024px] mx-auto px-5 sm:px-6 lg:px-8 py-14 sm:py-16 md:py-20 scroll-mt-20" id="showtimes">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-7 sm:mb-8 md:mb-10">
           <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold">{t("nav.nowShowing")}</h2>
-          <div className="flex w-full sm:w-auto bg-[var(--app-panel2)] border border-[var(--app-edge)] rounded-full p-1 gap-1">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex w-full sm:w-auto bg-[var(--app-panel2)] border border-[var(--app-edge)] rounded-full p-1 gap-1">
+              <button
+                className={`flex-1 sm:flex-none text-[13px] font-bold px-4 sm:px-5 py-2.5 rounded-full text-[var(--app-mute)] transition-all cursor-pointer ${activeTab === "now-showing" ? "bg-brand text-white shadow-[0_4px_14px_rgba(229,9,20,0.35)]" : ""}`}
+                onClick={() => setActiveTab("now-showing")}
+              >
+                {t("nav.nowShowing")}
+              </button>
+              <button
+                className={`flex-1 sm:flex-none text-[13px] font-bold px-4 sm:px-5 py-2.5 rounded-full text-[var(--app-mute)] transition-all cursor-pointer ${activeTab === "coming-soon" ? "bg-brand text-white shadow-[0_4px_14px_rgba(229,9,20,0.35)]" : ""}`}
+                onClick={() => setActiveTab("coming-soon")}
+              >
+                {t("nav.comingSoon")}
+              </button>
+            </div>
             <button
-              className={`flex-1 sm:flex-none text-[13px] font-bold px-4 sm:px-5 py-2.5 rounded-full text-[var(--app-mute)] transition-all cursor-pointer ${activeTab === "now-showing" ? "bg-brand text-white shadow-[0_4px_14px_rgba(229,9,20,0.35)]" : ""}`}
-              onClick={() => setActiveTab("now-showing")}
+              onClick={() => navigate(activeTab === "now-showing" ? "/now-showing" : "/coming-soon")}
+              className="inline-flex items-center gap-1 text-brand text-sm font-bold hover:underline cursor-pointer border-none bg-transparent p-0"
             >
-              {t("nav.nowShowing")}
-            </button>
-            <button
-              className={`flex-1 sm:flex-none text-[13px] font-bold px-4 sm:px-5 py-2.5 rounded-full text-[var(--app-mute)] transition-all cursor-pointer ${activeTab === "coming-soon" ? "bg-brand text-white shadow-[0_4px_14px_rgba(229,9,20,0.35)]" : ""}`}
-              onClick={() => setActiveTab("coming-soon")}
-            >
-              {t("nav.comingSoon")}
+              {t("home.viewAllMovies")} →
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4 lg:gap-5">
-          {movieList.map((movie) => (
-            <MovieCard key={movie.title} movie={movie} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4  gap-2 sm:gap-3 md:gap-4 lg:gap-5 mx-auto">
+          {movieList.slice(0, 4).map((movie) => (
+            <MovieCard key={movie.id ?? movie.title} movie={movie} />
           ))}
         </div>
       </section>
@@ -397,7 +432,7 @@ export default function Home() {
       <span id="coming-soon" />
 
       {/* ===== CINEMAS ===== */}
-      <section className="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8 py-14 sm:py-16 md:py-20 scroll-mt-20" id="cinemas">
+      <section className="max-w-[1024px] mx-auto px-5 sm:px-6 lg:px-8 py-14 sm:py-16 md:py-20 scroll-mt-20" id="cinemas">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4 mb-7 sm:mb-8 md:mb-10">
           <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold">{t("home.ourCinemas")}</h2>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
@@ -419,8 +454,11 @@ export default function Home() {
         )}
       </section>
 
+      {/* ===== WHAT OUR CUSTOMERS SAY + FEEDBACK ===== */}
+      <CustomerFeedback movies={dbMovies} />
+
       {/* ===== PROMOTION POSTER ===== */}
-      <section className="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8 pb-16 md:pb-20">
+      <section className="max-w-[1024px] mx-auto px-5 sm:px-6 lg:px-8 pb-16 md:pb-20">
         <div className="relative overflow-hidden rounded-3xl border border-[var(--app-edge)] min-h-[320px] sm:min-h-[360px] flex items-stretch">
           <img
             className="absolute inset-0 w-full h-full object-cover"

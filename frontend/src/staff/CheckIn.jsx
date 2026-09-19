@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { Armchair, CalendarClock, CircleCheck, Clapperboard, DoorOpen, ScanLine, Search, TriangleAlert } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Armchair, CalendarClock, Camera, CircleCheck, Clapperboard, ScanLine, Search, X } from "lucide-react";
+import { Html5Qrcode } from "html5-qrcode";
 import api from "../api/client";
 import { usePrefs } from "../context/PrefsContext";
 
@@ -18,16 +19,20 @@ export default function CheckIn() {
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [checkingId, setCheckingId] = useState(null);
+  const [scanning, setScanning] = useState(false);
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    if (!code.trim()) { setError(t("staff.enterCodeError")); return; }
+  const scannerRef = useRef(null);
+  const processedRef = useRef(false);
+
+  const runSearch = async (raw) => {
+    const value = (raw ?? "").trim();
+    if (!value) { setError(t("staff.enterCodeError")); return; }
     setSearched(false);
     setLoading(true);
     setError("");
     setSuccessMsg("");
     try {
-      const { data } = await api.get("/staff/tickets/search", { params: { code: code.trim() } });
+      const { data } = await api.get("/staff/tickets/search", { params: { code: value } });
       setTickets(data);
     } catch (err) {
       setTickets([]);
@@ -35,6 +40,55 @@ export default function CheckIn() {
     } finally {
       setSearched(true);
       setLoading(false);
+    }
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    runSearch(code);
+  };
+
+  const stopScan = useCallback(async () => {
+    processedRef.current = false;
+    setScanning(false);
+    if (scannerRef.current) {
+      try { await scannerRef.current.stop(); } catch { /* ignore */ }
+      scannerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => () => { stopScan(); }, [stopScan]);
+
+  const startScan = async () => {
+    setError("");
+    setSuccessMsg("");
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError(t("staff.cameraNotSupported"));
+      return;
+    }
+    processedRef.current = false;
+    setScanning(true);
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    try {
+      scannerRef.current = new Html5Qrcode("qr-reader", { verbose: false });
+      await scannerRef.current.start(
+        { facingMode: "environment" },
+        { fps: 10 },
+        (decodedText) => {
+          if (processedRef.current) return;
+          processedRef.current = true;
+          setCode(decodedText);
+          stopScan();
+          runSearch(decodedText);
+        },
+        () => {}
+      );
+    } catch (err) {
+      processedRef.current = false;
+      try { if (scannerRef.current) await scannerRef.current.stop(); } catch { /* ignore */ }
+      scannerRef.current = null;
+      setScanning(false);
+      setError(err?.name === "NotAllowedError" ? t("staff.cameraPermissionDenied") : t("staff.cameraNotSupported"));
     }
   };
 
@@ -81,10 +135,42 @@ export default function CheckIn() {
           value={code}
           onChange={(e) => { setCode(e.target.value); setError(""); setSuccessMsg(""); }}
         />
-        <button type="submit" className="inline-flex items-center gap-2 border-none cursor-pointer py-[11px] px-5 text-sm font-bold rounded-xl transition-all duration-200 bg-[#22a34e] text-white shadow-[0_4px_14px_rgba(34,163,78,0.35)] hover:bg-[#1e9344]">
+        <button type="submit" className="inline-flex items-center gap-2 border-none cursor-pointer py-[11px] px-5 text-sm font-bold rounded-xl transition-all duration-200 bg-[#22a34e] text-white shadow-[0_4px_14px_rgba(34,163,78,0.35)] hover:bg-[#1e9344] whitespace-nowrap">
           {loading ? t("staff.searching") : t("staff.validate")}
         </button>
+        {!scanning && (
+          <button
+            type="button"
+            onClick={startScan}
+            className="inline-flex items-center gap-2 border border-[var(--app-edge2)] cursor-pointer py-[11px] px-5 text-sm font-bold rounded-xl transition-all duration-200 bg-[var(--app-panel2)] text-[var(--app-ink)] hover:bg-[var(--app-fill)] whitespace-nowrap"
+          >
+            <Camera size={16} /> {t("staff.scanQr")}
+          </button>
+        )}
       </form>
+
+      {scanning && (
+        <div className="bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <span className="inline-flex items-center gap-2 text-sm font-bold text-[var(--app-ink)]">
+              <ScanLine size={16} className="text-brand" /> {t("staff.scanning")}
+            </span>
+            <button
+              type="button"
+              onClick={stopScan}
+              className="inline-flex items-center gap-1.5 text-[13px] font-bold text-[var(--app-mute)] hover:text-[var(--app-ink)] cursor-pointer"
+            >
+              <X size={15} /> {t("staff.closeCamera")}
+            </button>
+          </div>
+          <div className="relative w-full max-w-md mx-auto">
+            <div id="qr-reader" className="w-full rounded-2xl overflow-hidden border border-[var(--app-edge2)] bg-black" />
+            <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+              <div className="w-48 h-48 border-2 border-white/70 rounded-2xl" />
+            </div>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="bg-[rgba(229,9,20,0.12)] border border-[rgba(229,9,20,0.4)] text-[#ff6b6b] text-[13px] p-[10px_14px] rounded-[10px] flex justify-between items-center">

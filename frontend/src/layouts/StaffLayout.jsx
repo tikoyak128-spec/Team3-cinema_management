@@ -6,9 +6,10 @@ import { usePrefs } from "../context/PrefsContext";
 import LangSwitch from "../components/LangSwitch";
 import StaffFooter from "../components/StaffFooter";
 import {
+  CalendarDays,
   ChartColumn,
   CircleCheck,
-  Clapperboard,
+  CircleUser,
   LogOut,
   PanelLeft,
   Search,
@@ -16,8 +17,8 @@ import {
   Sun,
   Moon,
   ShoppingCart,
+  Ticket,
   UserRound,
-  X,
 } from "lucide-react";
 
 const staffSections = [
@@ -34,6 +35,13 @@ const staffSections = [
       { nameKey: "sellTicket", icon: ShoppingCart, path: "/staff/sell" },
       { nameKey: "searchTicket", icon: Search, path: "/staff/search" },
       { nameKey: "checkIn", icon: CircleCheck, path: "/staff/checkin" },
+    ],
+  },
+  {
+    labelKey: "management",
+    items: [
+      { nameKey: "bookings", icon: CalendarDays, path: "/staff/bookings" },
+      { nameKey: "tickets", icon: Ticket, path: "/staff/tickets" },
     ],
   },
 ];
@@ -94,117 +102,157 @@ export default function StaffLayout({ children }) {
 
       {/* Sidebar */}
       <aside
-        className={`flex flex-col border-r border-[var(--app-edge)] bg-[var(--app-panel)] transition-all duration-300 ${
+        className={`transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
           isMobile
-            ? `fixed top-0 left-0 z-[100] h-screen w-[270px] p-[24px_16px] transform ${
+            ? `fixed top-0 left-0 z-[100] h-screen w-[270px] transform ${
                 sidebarOpen ? "translate-x-0" : "-translate-x-full"
               }`
-            : `shrink-0 self-stretch sticky top-0 ${compact ? "w-[96px] items-center p-[24px_10px]" : "w-[270px] p-[24px_16px]"}`
+            : `shrink-0 border-r bg-gradient-to-b from-white to-[#f1f1f1] dark:from-[#111111] dark:to-[#0a0a0a] border-[rgba(0,0,0,0.1)] dark:border-dark-border ${
+                compact ? "w-[94px]" : "w-[270px]"
+              }`
         }`}
       >
-        {/* Logo / Header */}
-        <div
-          className={`mb-6 flex items-center gap-2.5 border-b border-[var(--app-edge)] pb-5 ${
-            compact ? "justify-center" : "justify-between"
-          }`}
-        >
+        <div className="flex min-h-full flex-col overflow-y-auto overflow-x-hidden">
+          {/* Logo / Header */}
           <div
-            className="flex cursor-pointer items-center gap-2.5"
-            onClick={() => handleNav("/staff/dashboard")}
+            className={`flex min-h-[70px] items-center gap-2 border-b px-[18px] border-[rgba(0,0,0,0.1)] dark:border-dark-border ${
+              compact ? "justify-center" : "justify-between"
+            }`}
           >
+            <div
+              className="flex cursor-pointer items-center gap-3 overflow-hidden whitespace-nowrap"
+              onClick={() => handleNav("/staff/dashboard")}
+            >
+              {!compact && (
+                <span className="text-[18px] font-extrabold tracking-[2px] text-[#1a1a1a] dark:text-[#f5f5f5]">
+                  KHMER <b className="font-extrabold text-brand">CINEMA</b>
+                </span>
+              )}
+            </div>
             {!compact && (
-              <span className="text-[18px] font-extrabold tracking-[2px] text-[var(--app-ink)]">
-                KHMER <span className="text-brand">CINEMA</span>
-              </span>
+              <div className="flex shrink-0 gap-1.5">
+                {isMobile ? (
+                  <button
+                    className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border text-[14px] text-muted transition-all duration-200 dark:bg-[rgba(255,255,255,0.03)] dark:border-dark-border bg-[rgba(0,0,0,0.03)] border-[rgba(0,0,0,0.1)] hover:border-[rgba(229,9,20,0.3)] hover:bg-[rgba(229,9,20,0.1)] hover:text-brand"
+                    onClick={() => setSidebarOpen(false)}
+                    title={t("staff.closeSidebar")}
+                  >
+                    ✕
+                  </button>
+                ) : (
+                  <button
+                    className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border text-[14px] text-muted transition-all duration-200 dark:bg-[rgba(255,255,255,0.03)] dark:border-dark-border bg-[rgba(0,0,0,0.03)] border-[rgba(0,0,0,0.1)] hover:border-[rgba(229,9,20,0.3)] hover:bg-[rgba(229,9,20,0.1)] hover:text-brand"
+                    onClick={() => setCollapsed(true)}
+                    title={t("staff.collapseSidebar")}
+                  >
+                    «
+                  </button>
+                )}
+              </div>
             )}
             {compact && (
-              <span className="text-brand"><Clapperboard size={26} /></span>
+              <button
+                className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border text-[14px] text-muted transition-all duration-200 dark:bg-[rgba(255,255,255,0.03)] dark:border-dark-border bg-[rgba(0,0,0,0.03)] border-[rgba(0,0,0,0.1)] hover:border-[rgba(229,9,20,0.3)] hover:bg-[rgba(229,9,20,0.1)] hover:text-brand"
+                onClick={toggleSidebar}
+                title={t("staff.expandSidebar")}
+              >
+                »
+              </button>
             )}
           </div>
-          {isMobile ? (
-            <button
-              onClick={() => setSidebarOpen(false)}
-              title={t("staff.closeSidebar")}
-              className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-[var(--app-edge2)] text-[var(--app-mute)] transition-colors duration-200 hover:text-brand"
-            >
-              <X size={16} />
-            </button>
-          ) : (
-            !compact && (
-              <button
-                onClick={() => setCollapsed(true)}
-                title={t("staff.collapseSidebar")}
-                className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-[var(--app-edge2)] text-[var(--app-mute)] transition-colors duration-200 hover:text-brand"
-              >
-                «
-              </button>
-            )
-          )}
-        </div>
 
-        <div
-          className={`mb-5 flex items-center gap-2 rounded-xl border border-brand/30 bg-brand/10 px-3.5 py-2.5 ${
-            compact ? "justify-center" : ""
-          }`}
-        >
-          <span className="text-brand"><Shield size={16} /></span>
-          {!compact && <span className="text-[13px] font-bold text-brand">{t("staff.staffPanel")}</span>}
-        </div>
-
-        <nav className="flex flex-1 flex-col gap-3 overflow-y-auto">
-          {staffSections.map((section) => (
-            <div key={section.labelKey} className="flex flex-col gap-1">
-              {compact ? (
-                <div className="mx-2 my-1 h-px bg-[var(--app-edge)]" />
-              ) : (
-                <div className="px-3 pb-1.5 pt-1 text-[11px] font-bold uppercase tracking-[1.2px] text-[var(--app-mute)]">
-                  {t(`staff.${section.labelKey}`)}
-                </div>
-              )}
-              {section.items.map((item) => (
-                <button
-                  key={item.path}
-                  onClick={() => handleNav(item.path)}
-                  title={compact ? t(`staff.${item.nameKey}`) : undefined}
-                  className={`relative flex w-full cursor-pointer items-center rounded-xl text-left text-[14px] font-semibold transition-all duration-200 ${
-                    compact ? "justify-center py-3" : "gap-3 px-3.5 py-[11px]"
-                  } ${
-                    isActive(item.path)
-                      ? "bg-brand text-white shadow-[0_4px_14px_rgba(229,9,20,0.35)]"
-                      : "text-[var(--app-mute)] hover:bg-[var(--app-fill)] hover:text-[var(--app-ink)]"
+          <nav className={`flex flex-1 flex-col gap-1.5 px-2.5 py-4 ${compact ? "items-center" : ""}`}>
+            {staffSections.map((section) => (
+              <div key={section.labelKey} className="mb-3">
+                <div
+                  className={`flex items-center gap-2 px-3 pb-2 pt-1.5 text-[11px] font-bold uppercase tracking-[1.2px] text-muted ${
+                    compact ? "justify-center !px-0 !py-2" : ""
                   }`}
                 >
-                  <span className="flex w-[22px] shrink-0 justify-center text-[18px]"><item.icon size={18} /></span>
-                  {!compact && <span className="flex-1">{t(`staff.${item.nameKey}`)}</span>}
-                </button>
-              ))}
-            </div>
-          ))}
-        </nav>
+                  {compact ? (
+                    <span className="h-px w-8 bg-black/10 dark:bg-white/10" />
+                  ) : (
+                    <span className="text-muted">{t(`staff.${section.labelKey}`)}</span>
+                  )}
+                </div>
+                {section.items.map((item) => {
+                  const active = isActive(item.path);
+                  return (
+                    <button
+                      key={item.path}
+                      onClick={() => handleNav(item.path)}
+                      title={compact ? t(`staff.${item.nameKey}`) : undefined}
+                      className={`group relative flex w-full cursor-pointer items-center whitespace-nowrap rounded-[10px] px-3.5 py-[11px] text-left text-[14px] font-medium transition-all duration-200 ${
+                        compact ? "justify-center !gap-0 !px-0 py-3" : "gap-3.5"
+                      } ${
+                        active
+                          ? compact
+                            ? "font-semibold text-brand"
+                            : "bg-gradient-to-br from-[rgba(229,9,20,0.15)] to-[rgba(229,9,20,0.05)] font-semibold text-brand before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[3px] before:rounded-r before:bg-brand"
+                          : compact
+                            ? "text-muted hover:text-[#1a1a1a] dark:hover:text-[#f5f5f5]"
+                            : "text-muted hover:bg-black/5 hover:text-[#1a1a1a] dark:hover:bg-white/5 dark:hover:text-[#f5f5f5]"
+                      }`}
+                    >
+                      <span
+                        className={`shrink-0 ${
+                          compact
+                            ? `flex h-10 w-10 items-center justify-center rounded-lg border transition-all duration-200 ${
+                                active
+                                  ? "border-brand/50 text-brand"
+                                  : "border-transparent text-current group-hover:border-brand/40 group-hover:text-brand group-hover:bg-black/5 dark:group-hover:bg-white/10"
+                              }`
+                            : "flex w-[26px] justify-center"
+                        }`}
+                      >
+                        <item.icon size={22} strokeWidth={2} />
+                      </span>
+                      {!compact && <span className="flex-1">{t(`staff.${item.nameKey}`)}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </nav>
 
-        <div
-          className={`mb-3 flex items-center gap-3 rounded-xl border border-[var(--app-edge)] bg-[var(--app-panel2)] px-3 py-2.5 ${
-            compact ? "justify-center" : ""
-          }`}
-        >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand"><Shield size={18} /></span>
-          {!compact && (
-            <div className="flex flex-col overflow-hidden">
-              <span className="truncate text-[13px] font-semibold text-[var(--app-ink)]">{user?.name || t("staff.staffMember")}</span>
-              <span className="text-[11px] text-[var(--app-mute)]">{t("staff.ticketOfficer")}</span>
+          {/* Bottom profile + logout */}
+          <div className="relative border-t border-[rgba(0,0,0,0.1)] p-3.5 dark:border-dark-border">
+            <div
+              className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors duration-200 bg-[rgba(0,0,0,0.03)] dark:bg-[rgba(255,255,255,0.03)] border-[rgba(0,0,0,0.1)] dark:border-dark-border hover:border-[rgba(229,9,20,0.3)] ${
+                compact ? "justify-center" : ""
+              }`}
+              onClick={() => handleNav("/staff/profile")}
+              title={t("staff.profile")}
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-brand/10 text-[13px] font-bold text-brand">
+                {user?.avatar ? (
+                  <img src={user.avatar} alt={user?.name} className="h-full w-full object-cover" />
+                ) : (
+                  <CircleUser size={20} />
+                )}
+              </span>
+              {!compact && (
+                <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+                  <span className="truncate text-[13px] font-semibold text-[#1a1a1a] dark:text-[#f5f5f5]">
+                    {user?.name || t("staff.staffMember")}
+                  </span>
+                  <span className="truncate text-[11px] text-muted">{t("staff.ticketOfficer")}</span>
+                </div>
+              )}
+              {!compact && <span className="shrink-0 text-[14px] text-muted">▾</span>}
             </div>
-          )}
+            <button
+              onClick={handleLogout}
+              title={compact ? t("staff.logout") : undefined}
+              className={`mt-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] border py-2.5 text-[13px] font-semibold text-muted transition-all duration-200 bg-transparent dark:border-dark-border border-[rgba(0,0,0,0.1)] hover:border-[rgba(229,9,20,0.3)] hover:bg-[rgba(229,9,20,0.1)] hover:text-brand ${
+                compact ? "px-3" : ""
+              }`}
+            >
+              <LogOut size={16} />
+              {!compact && <span>{t("staff.logout")}</span>}
+            </button>
+          </div>
         </div>
-
-        <button
-          onClick={handleLogout}
-          title={compact ? t("staff.logout") : undefined}
-          className={`flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-[var(--app-edge2)] py-3 text-[13px] font-semibold text-[var(--app-mute)] transition-all duration-200 hover:border-brand/30 hover:bg-brand/10 hover:text-brand ${
-            compact ? "px-3" : ""
-          }`}
-        >
-          <LogOut size={16} /> {!compact && t("staff.logout")}
-        </button>
       </aside>
 
       {/* Main Content */}

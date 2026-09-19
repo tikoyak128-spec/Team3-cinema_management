@@ -8,6 +8,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { usePrefs } from "../../../../context/PrefsContext";
+import Select from "../../../../components/Select";
 import { AreaChart, BarChart } from "./charts";
 
 const periods = ["Last 7 days", "Last 30 days", "Last quarter", "This year"];
@@ -97,11 +98,11 @@ export default function Reports() {
 
       <div className="flex items-center justify-between gap-4 flex-wrap mb-1">
         <div className="flex gap-2.5 flex-wrap items-center">
-          <select className="bg-[var(--app-panel)] border border-[var(--app-edge)] text-[var(--app-ink2)] font-inherit text-[13px] py-2.5 px-3 rounded-[10px] outline-none cursor-pointer" value={period} onChange={(e) => setPeriod(e.target.value)}>
+          <Select containerClassName="relative w-auto" className="bg-[var(--app-panel)] border border-[var(--app-edge)] text-[var(--app-ink2)] font-inherit text-[13px] py-2.5 px-3 rounded-[10px] outline-none cursor-pointer" value={period} onChange={(e) => setPeriod(e.target.value)}>
             {periods.map((p) => (
               <option key={p} value={p}>{t(periodKey[p])}</option>
             ))}
-          </select>
+          </Select>
           <span className="text-[14px] text-[var(--app-mute)]">{t("adminReports.periodLabel", { period: t(periodKey[period]) })}</span>
         </div>
       </div>

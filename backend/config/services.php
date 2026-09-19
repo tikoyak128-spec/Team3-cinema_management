@@ -48,6 +48,7 @@ return [
         'merchant_name' => env('BAKONG_MERCHANT_NAME', 'Khmer Cinema'),
         'merchant_city' => env('BAKONG_MERCHANT_CITY', 'Phnom Penh'),
         'currency' => env('BAKONG_CURRENCY', 'KHR'),
+        'webhook_token' => env('BAKONG_WEBHOOK_TOKEN'),
     ],
 
 ];

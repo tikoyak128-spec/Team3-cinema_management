@@ -89,7 +89,7 @@ export function AreaChart({
       {labels.map((lb, i) => {
         const x = padX + i * stepX;
         return (
-          <text key={lb} x={x} y={height - 8} textAnchor="middle" style={{ fill: axisColor }} className="text-[11px]">
+          <text key={i} x={x} y={height - 8} textAnchor="middle" style={{ fill: axisColor }} className="text-[11px]">
             {lb}
           </text>
         );
@@ -167,7 +167,7 @@ export function BarChart({
       {labels.map((lb, i) => {
         const x = padX + i * slot + slot / 2;
         return (
-          <text key={lb} x={x} y={height - 8} textAnchor="middle" style={{ fill: axisColor }} className="text-[11px]">
+          <text key={i} x={x} y={height - 8} textAnchor="middle" style={{ fill: axisColor }} className="text-[11px]">
             {lb}
           </text>
         );

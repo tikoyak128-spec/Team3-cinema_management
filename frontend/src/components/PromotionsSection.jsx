@@ -256,7 +256,7 @@ export default function PromotionsSection() {
   };
 
   return (
-    <section className="max-w-[1280px] mx-auto px-5 sm:px-6 lg:px-8 py-14 sm:py-16 md:py-20 scroll-mt-20" id="promotions">
+    <section className="max-w-[1024px] mx-auto px-5 sm:px-6 lg:px-8 py-14 sm:py-16 md:py-20 scroll-mt-20" id="promotions">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4 mb-8 sm:mb-12 flex-wrap">
         <div>
           <span className="inline-flex items-center gap-2 bg-brand/15 text-brand text-xs font-bold tracking-[2px] uppercase px-3.5 py-1.5 rounded-full mb-3">
@@ -327,7 +327,7 @@ export default function PromotionsSection() {
           ))}
 
           {/* Promotion Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-4">
             {regular.map((promo) => {
               const isPlainDiscount = ["FREE", "2X"].includes(promo.discount);
               return (

@@ -75,9 +75,69 @@ class BakongService
 
     /**
      * Determine if the response represents a successfully paid transaction.
+     *
+     * A transaction is only considered paid once Bakong returns a successful
+     * responseCode AND actually includes transaction data. Unpaid lookups may
+     * return responseCode 0 with an empty data payload, so we must not treat
+     * those as paid.
      */
     public function isPaid(array $response): bool
     {
-        return isset($response['responseCode']) && (int) $response['responseCode'] === 0;
+        if (! isset($response['responseCode']) || (int) $response['responseCode'] !== 0) {
+            return false;
+        }
+
+        $data = $response['data'] ?? null;
+
+        if (empty($data)) {
+            return false;
+        }
+
+        if (isset($data['paymentStatus'])) {
+            return in_array(
+                strtoupper((string) $data['paymentStatus']),
+                ['SUCCESSFUL', 'SUCCESS', 'PAID', 'COMPLETED'],
+                true
+            );
+        }
+
+        return true;
+    }
+
+    /**
+     * Determine if the response is a business "transaction not found" state.
+     *
+     * Bakong returns responseCode 1 / errorCode 1 when no transaction matches
+     * the given md5 yet. This is a normal transient state (payment not indexed
+     * yet, not paid, or paid against a different QR) — the caller should keep
+     * checking rather than treating it as a fatal error.
+     */
+    public function isNotFound(array $response): bool
+    {
+        return (int) ($response['responseCode'] ?? -1) === 1;
+    }
+
+    /**
+     * Determine if the response indicates an API-level error (e.g. rate limit,
+     * invalid token, network failure) rather than a business "not paid yet" or
+     * "transaction not found" result.
+     */
+    public function hasError(array $response): bool
+    {
+        return (int) ($response['responseCode'] ?? -1) === -1;
+    }
+
+    /**
+     * Whether the paid amount returned by Bakong matches the expected total.
+     */
+    public function amountMatches(array $response, float $expected): bool
+    {
+        $amount = $response['data']['amount'] ?? null;
+
+        if ($amount === null) {
+            return false;
+        }
+
+        return abs((float) $amount - $expected) < 0.01;
     }
 }

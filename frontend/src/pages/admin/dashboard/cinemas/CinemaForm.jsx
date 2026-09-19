@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api, { buildFormData } from "../../../../api/client";
 import { usePrefs } from "../../../../context/PrefsContext";
+import { X } from "lucide-react";
 
 export default function CinemaForm({ isEdit = false }) {
   const navigate = useNavigate();
@@ -166,7 +167,7 @@ export default function CinemaForm({ isEdit = false }) {
             <button type="submit" className="inline-flex items-center gap-2 border-none cursor-pointer font-inherit py-[11px] px-5 text-[14px] font-bold rounded-xl transition-all duration-200 bg-[#e50914] text-white shadow-[0_4px_14px_rgba(229,9,20,0.35)] hover:bg-[#f40612] hover:-translate-y-px" disabled={submitting}>
               {submitting ? t("common.saving") : isEdit ? t("common.save") : t("adminCinemaForm.create")}
             </button>
-            <button type="button" className="inline-flex items-center gap-2 border-none cursor-pointer font-inherit py-[11px] px-5 text-[14px] font-bold rounded-xl transition-all duration-200 bg-transparent text-[var(--app-ink2)] border border-[var(--app-edge2)] hover:bg-[var(--app-fill)]" onClick={() => navigate("/admin/cinemas")}>{t("common.cancel")}</button>
+            <button type="button" className="inline-flex items-center gap-2 border cursor-pointer font-inherit py-[11px] px-5 text-[14px] font-bold rounded-xl transition-all duration-200 bg-[var(--app-panel2)] text-[var(--app-ink2)] border-[var(--app-edge2)] hover:bg-[rgba(229,9,20,0.08)] hover:text-brand hover:border-[rgba(229,9,20,0.35)]" onClick={() => navigate("/admin/cinemas")}><X size={16} /> {t("common.cancel")}</button>
           </div>
         </div>
       </form>

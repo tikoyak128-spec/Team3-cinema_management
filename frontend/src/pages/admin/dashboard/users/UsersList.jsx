@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Mail, Pencil, Phone, RefreshCw, Search, Shield, Trash2, UserPlus, Users } from "lucide-react";
 import api from "../../../../api/client";
+import Select from "../../../../components/Select";
 import { usePrefs } from "../../../../context/PrefsContext";
 
 const ROLE_KEYS = { admin: "users.admins", staff: "users.staff", customer: "users.customers" };
@@ -137,12 +138,12 @@ export default function UsersList() {
           <span className="shrink-0"><Search size={16} /></span>
           <input className="bg-transparent border-none outline-none text-[var(--app-ink)] font-inherit text-[14px] w-full" placeholder={t("users.searchPlaceholder")} value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
-        <select className="bg-[var(--app-panel2)] border border-[var(--app-edge)] text-[var(--app-ink2)] font-inherit text-[13px] py-2.5 px-3 rounded-[10px] outline-none cursor-pointer appearance-none w-full sm:w-auto" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+        <Select containerClassName="relative w-full sm:w-auto" className="bg-[var(--app-panel2)] border border-[var(--app-edge)] text-[var(--app-ink2)] font-inherit text-[13px] py-2.5 px-3 rounded-[10px] outline-none cursor-pointer appearance-none w-full sm:w-auto" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
           <option value="all">{t("users.allRoles")}</option>
           <option value="admin">{t("users.admins")}</option>
           <option value="staff">{t("users.staff")}</option>
           <option value="customer">{t("users.customers")}</option>
-        </select>
+        </Select>
       </div>
 
       <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-5 max-sm:grid-cols-[repeat(auto-fill,minmax(150px,1fr))]">

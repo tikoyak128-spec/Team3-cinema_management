@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Room;
 use App\Models\Showtime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -62,6 +63,20 @@ class ShowtimeController extends Controller
             ],
         ]);
 
+        $conflict = $this->findConflictingShowtime(
+            (int) $validated['cinema_room_id'],
+            (int) $validated['movie_id'],
+            $validated['start_time'],
+            $validated['end_time']
+        );
+
+        if ($conflict) {
+            return response()->json([
+                'message' => 'This cinema already screens another movie during the requested time window.',
+                'conflicting_showtime' => $conflict->load(['movie', 'room.cinema']),
+            ], 422);
+        }
+
         $showtime = Showtime::create($validated);
 
         return response()->json(
@@ -112,6 +127,21 @@ class ShowtimeController extends Controller
             ],
         ]);
 
+        $conflict = $this->findConflictingShowtime(
+            (int) ($validated['cinema_room_id'] ?? $showtime->cinema_room_id),
+            (int) ($validated['movie_id'] ?? $showtime->movie_id),
+            $validated['start_time'] ?? $showtime->start_time,
+            $validated['end_time'] ?? $showtime->end_time,
+            $showtime->id
+        );
+
+        if ($conflict) {
+            return response()->json([
+                'message' => 'This cinema already screens another movie during the requested time window.',
+                'conflicting_showtime' => $conflict->load(['movie', 'room.cinema']),
+            ], 422);
+        }
+
         $showtime->update($validated);
 
         return response()->json(
@@ -134,5 +164,29 @@ class ShowtimeController extends Controller
         return response()->json([
             'message' => 'Showtime deleted successfully'
         ]);
+    }
+
+    private function findConflictingShowtime(
+        int $roomId,
+        int $movieId,
+        string $startTime,
+        string $endTime,
+        ?int $excludeId = null
+    ): ?Showtime {
+        $room = Room::findOrFail($roomId);
+
+        return Showtime::where('id', '!=', $excludeId ?? 0)
+            ->where('status', 'active')
+            ->where('start_time', '<', $endTime)
+            ->where('end_time', '>', $startTime)
+            ->where(function ($q) use ($room, $movieId) {
+                $q->where('cinema_room_id', $room->id)
+                    ->orWhere(function ($q2) use ($room, $movieId) {
+                        $q2->whereHas('room', fn ($r) => $r->where('cinema_id', $room->cinema_id))
+                            ->where('movie_id', '!=', $movieId);
+                    });
+            })
+            ->orderBy('start_time')
+            ->first();
     }
 }

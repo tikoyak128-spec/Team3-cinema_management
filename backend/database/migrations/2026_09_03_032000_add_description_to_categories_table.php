@@ -8,15 +8,21 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('categories', function (Blueprint $table) {
+        if (! Schema::hasTable('movie_categories') || Schema::hasColumn('movie_categories', 'description')) {
+            return;
+        }
+
+        Schema::table('movie_categories', function (Blueprint $table) {
             $table->text('description')->nullable()->after('name');
         });
     }
 
     public function down(): void
     {
-        Schema::table('categories', function (Blueprint $table) {
-            $table->dropColumn('description');
-        });
+        if (Schema::hasTable('movie_categories') && Schema::hasColumn('movie_categories', 'description')) {
+            Schema::table('movie_categories', function (Blueprint $table) {
+                $table->dropColumn('description');
+            });
+        }
     }
 };

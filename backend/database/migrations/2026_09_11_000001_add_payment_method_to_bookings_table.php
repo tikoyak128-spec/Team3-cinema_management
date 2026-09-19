@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (! Schema::hasTable('bookings') || Schema::hasColumn('bookings', 'payment_method')) {
+            return;
+        }
+
         Schema::table('bookings', function (Blueprint $table) {
             $table->string('payment_method', 20)->nullable()->after('total_amount');
         });
@@ -15,8 +19,10 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('bookings', function (Blueprint $table) {
-            $table->dropColumn('payment_method');
-        });
+        if (Schema::hasTable('bookings') && Schema::hasColumn('bookings', 'payment_method')) {
+            Schema::table('bookings', function (Blueprint $table) {
+                $table->dropColumn('payment_method');
+            });
+        }
     }
 };

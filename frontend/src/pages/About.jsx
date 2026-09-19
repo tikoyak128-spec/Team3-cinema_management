@@ -1,7 +1,12 @@
+import { useEffect, useState } from "react";
 import { ArrowRight, MapPin, Film, Ticket, Star, Users, Heart, Shield, Award, Tv, Popcorn, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { usePrefs } from "../context/PrefsContext";
-import HeroBanner from "../components/HeroBanner";
+import useHeroImage from "../hooks/useHeroImage";
+import api from "../api/client";
+
+const DEFAULT_HERO =
+  "https://s.studiobinder.com/wp-content/uploads/2025/05/Film-Lighting-and-Artificial-Lighting-on-Movie-Set-Production-Cast-and-Crew.jpg";
 
 const stats = [
   { value: "50+", labelKey: "home.hallsNationwide" },
@@ -66,52 +71,93 @@ const features = [
   },
 ];
 
-const teamMembers = [
-  {
-    name: "Sok Vannak",
-    roleKey: "about.roleCeo",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face",
-    social: {
-      facebook: "#",
-      linkedin: "#",
-      twitter: "#",
-    },
-  },
-  {
-    name: "Chan Sophea",
-    roleKey: "about.roleOps",
-    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop&crop=face",
-    social: {
-      facebook: "#",
-      linkedin: "#",
-      twitter: "#",
-    },
-  },
-  {
-    name: "Bun Rithy",
-    roleKey: "about.roleCreative",
-    image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face",
-    social: {
-      facebook: "#",
-      linkedin: "#",
-      twitter: "#",
-    },
-  },
-];
 
 export default function About() {
   const { t } = usePrefs();
+  const heroImage = useHeroImage("about", DEFAULT_HERO);
+  const [team, setTeam] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get("/team-members")
+      .then(({ data }) => {
+        if (cancelled) return;
+        const list = (Array.isArray(data) ? data : [])
+          .filter((m) => m.is_active !== false)
+          .map((m) => ({
+            name: m.name,
+            role: m.role || "",
+            image: m.image || "",
+            social: {
+              facebook: m.facebook,
+              linkedin: m.linkedin,
+              twitter: m.twitter,
+            },
+          }));
+        if (list.length > 0) setTeam(list);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <>
-      {/* Page Header */}
-      <HeroBanner
-        title={t("footer.aboutUs")}
-        desc={t("about.heroText")}
-        image="https://s.studiobinder.com/wp-content/uploads/2025/05/Film-Lighting-and-Artificial-Lighting-on-Movie-Set-Production-Cast-and-Crew.jpg"
-      />
+      {/* Hero */}
+      <section className="relative min-h-[70vh] sm:min-h-[74vh] lg:min-h-[80vh] flex items-center overflow-hidden bg-[var(--app-page)]">
+        <div
+          className="absolute inset-0 bg-cover bg-center animate-[heroZoom_16s_ease-in-out_forwards]"
+          style={{
+            backgroundImage:
+              `url('${heroImage}')`,
+          }}
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(5,5,5,0.96),rgba(5,5,5,0.65)_50%,rgba(5,5,5,0.15))] z-[1]" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_top,#050505_0%,rgba(5,5,5,0.55)_40%,rgba(229,9,20,0.12)_100%)] z-[1]" />
+        <div className="absolute top-1/4 left-[12%] w-[180px] h-[180px] sm:w-[340px] sm:h-[340px] md:w-[420px] md:h-[420px] rounded-full bg-[rgba(229,9,20,0.18)] blur-[90px] md:blur-[130px] pointer-events-none z-[1]" />
+        <div className="absolute bottom-1/4 right-[8%] w-[140px] h-[140px] sm:w-[260px] sm:h-[260px] md:w-[340px] md:h-[340px] rounded-full bg-[rgba(237,195,143,0.12)] blur-[70px] md:blur-[110px] pointer-events-none z-[1]" />
+
+        <div className="relative z-[2] w-full max-w-[1024px] mx-auto px-5 sm:px-6 lg:px-8 pt-24 sm:pt-28 md:pt-28 pb-12 sm:pb-16">
+          <div className="max-w-[620px]">
+            <h1 className="text-3xl min-[400px]:text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-black leading-[1.08] tracking-tight text-balance text-white mb-3">
+              {t("about.heroTitle")}
+            </h1>
+            <p className="text-sm sm:text-base md:text-lg text-[#c9c9c9] leading-relaxed mb-6 max-w-[540px]">
+              {t("about.heroText")}
+            </p>
+            <div className="flex flex-col sm:flex-row flex-wrap gap-3">
+              <a
+                href="#about-story"
+                className="inline-flex items-center justify-center gap-2 bg-brand hover:bg-brand-hover text-white font-bold text-sm sm:text-[15px] px-7 py-3 rounded-full transition-all shadow-[0_8px_24px_rgba(229,9,20,0.4)] hover:-translate-y-0.5 no-underline"
+              >
+                {t("about.heroCtaStory")} <ArrowRight size={16} />
+              </a>
+              <Link
+                to="/now-showing"
+                className="inline-flex items-center justify-center gap-2 bg-transparent border border-white/30 hover:bg-white/10 text-white font-bold text-sm sm:text-[15px] px-7 py-3 rounded-full transition-all no-underline"
+              >
+                <Film size={16} /> {t("about.heroCtaMovies")}
+              </Link>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-7 sm:gap-x-9 md:gap-x-11 gap-y-4 mt-9 sm:mt-11 pt-5 border-t border-white/10">
+            {stats.map((stat) => (
+              <div className="flex flex-col gap-0.5" key={stat.labelKey}>
+                <span className="text-2xl sm:text-3xl font-black text-white">{stat.value}</span>
+                <span className="text-[10px] sm:text-[11px] text-[var(--app-mute)] font-semibold uppercase tracking-wider">
+                  {t(stat.labelKey)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* About Story */}
-      <section className="max-w-[1280px] mx-auto px-6 md:px-12 py-16 md:py-20">
+      <section className="max-w-[1024px] mx-auto px-6 md:px-12 py-16 md:py-20 scroll-mt-20" id="about-story">
         <div className="grid grid-cols-1 md:grid-cols-[1.2fr_1fr] gap-12 items-center">
           <div>
             <h2 className="text-[28px] md:text-[42px] font-black leading-[1.15] mb-4">
@@ -123,16 +169,6 @@ export default function About() {
             <p className="text-[15px] text-[var(--app-mute)] leading-relaxed mb-7">
               {t("about.storyText")}
             </p>
-            <div className="flex gap-8 flex-wrap">
-              {stats.map((stat) => (
-                <div className="flex flex-col gap-1" key={stat.labelKey}>
-                  <span className="text-[32px] font-black bg-[linear-gradient(135deg,#e50914,#ff6b6b)] bg-clip-text text-transparent">
-                    {stat.value}
-                  </span>
-                  <span className="text-[13px] text-[var(--app-mute)] font-semibold">{t(stat.labelKey)}</span>
-                </div>
-              ))}
-            </div>
           </div>
           <div className="relative">
             <div className="relative [perspective:1000px]">
@@ -149,7 +185,7 @@ export default function About() {
 
       {/* Mission & Vision */}
       <section className="bg-[var(--app-deep)] border-y border-[var(--app-edge)]">
-        <div className="max-w-[1280px] mx-auto px-6 md:px-12 py-16 md:py-20 grid grid-cols-1 md:grid-cols-2 gap-10">
+        <div className="max-w-[1024px] mx-auto px-6 md:px-12 py-16 md:py-20 grid grid-cols-1 md:grid-cols-2 gap-10">
           <div className="bg-[linear-gradient(135deg,var(--app-panel),var(--app-panel2))] border border-[var(--app-edge)] rounded-2xl p-8 md:p-10 transition-all hover:-translate-y-1 hover:border-brand/40">
             <div className="w-14 h-14 rounded-2xl bg-brand/15 flex items-center justify-center mb-5">
               <Star className="text-brand" size={26} />
@@ -172,7 +208,7 @@ export default function About() {
       </section>
 
       {/* Our Values */}
-      <section className="max-w-[1280px] mx-auto px-6 md:px-12 py-16 md:py-20">
+      <section className="max-w-[1024px] mx-auto px-6 md:px-10 py-16 md:py-10">
         <div className="text-center mb-12">
           <h2 className="text-[28px] md:text-[42px] font-black leading-[1.15]">
             {t("about.valuesTitle")}
@@ -199,7 +235,7 @@ export default function About() {
 
       {/* Why Choose Us / Features */}
       <section className="bg-[var(--app-deep)] border-y border-[var(--app-edge)]">
-        <div className="max-w-[1280px] mx-auto px-6 md:px-12 py-16 md:py-20">
+        <div className="max-w-[1024px] mx-auto px-6 md:px-12 py-16 md:py-20">
           <div className="text-center mb-12">
             <h2 className="text-[28px] md:text-[42px] font-black leading-[1.15]">
               {t("about.whyTitle")}
@@ -228,7 +264,7 @@ export default function About() {
 
       {/* Team Members */}
       <section className="bg-[var(--app-deep)] border-y border-[var(--app-edge)]">
-        <div className="max-w-[1280px] mx-auto px-6 md:px-12 py-16 md:py-20">
+        <div className="max-w-[1024px] mx-auto px-6 md:px-12 py-16 md:py-20">
           <div className="text-center mb-12">
             <h2 className="text-[28px] md:text-[42px] font-black leading-[1.15] mb-3">
               {t("about.teamTitle")}
@@ -238,7 +274,7 @@ export default function About() {
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-[960px] mx-auto">
-            {teamMembers.map((member) => (
+            {team.map((member) => (
               <div
                 key={member.name}
                 className="bg-[linear-gradient(135deg,var(--app-panel),var(--app-panel2))] border border-[var(--app-edge)] rounded-2xl overflow-hidden text-center transition-all hover:-translate-y-1 hover:border-brand/40 group"
@@ -272,7 +308,7 @@ export default function About() {
                 </div>
                 <div className="p-6">
                   <h3 className="text-lg font-bold mb-1">{member.name}</h3>
-                  <p className="text-sm text-brand font-semibold">{t(member.roleKey)}</p>
+                  <p className="text-sm text-brand font-semibold">{member.role ? member.role : (member.roleKey ? t(member.roleKey) : "")}</p>
                 </div>
               </div>
             ))}
@@ -281,7 +317,7 @@ export default function About() {
       </section>
 
       {/* CTA */}
-      <section className="max-w-[1280px] mx-auto px-6 md:px-12 py-16 md:py-20">
+      <section className="max-w-[1024px] mx-auto px-6 md:px-12 py-16 md:py-20">
         <div className="relative rounded-[24px] overflow-hidden">
           <img
             className="absolute inset-0 w-full h-full object-cover"

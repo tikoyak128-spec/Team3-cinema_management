@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams, Link, useSearchParams } from "react-router-dom";
-import { DoorOpen, Loader2, Ticket, TriangleAlert, ScanLine, MapPin, Building2, ChevronDown, BadgePercent } from "lucide-react";
-import { QRCodeSVG } from "qrcode.react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { ArrowLeft, DoorOpen, Loader2, TriangleAlert, ScanLine, MapPin, Building2, ChevronDown, BadgePercent, Download, Receipt, CreditCard, CheckCircle2 } from "lucide-react";
 import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import TicketCard from "../components/TicketCard";
+import PaymentModal from "../components/PaymentModal";
+import downloadPdf from "../utils/downloadPdf";
 
-const steps = ["Showtime", "Seats", "Pay", "Done"];
+const steps = ["Showtime", "Seats", "Receipt", "Tickets"];
 
 const currencySymbol = (currency) => (currency === "KHR" ? "៛" : "$");
 
@@ -36,9 +38,23 @@ export default function Booking() {
   const [paymentError, setPaymentError] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [success, setSuccess] = useState(null);
-  const [expired, setExpired] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [activePromo, setActivePromo] = useState(null);
+  const [availableDiscounts, setAvailableDiscounts] = useState([]);
+  const [discountInput, setDiscountInput] = useState("");
+  const [appliedDiscount, setAppliedDiscount] = useState(null);
+  const [discountError, setDiscountError] = useState("");
   const pollRef = useRef(null);
+  const ticketRefs = useRef({});
+
+  const clearPoll = () => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  };
 
   useEffect(() => {
     if (!promoId) return;
@@ -57,6 +73,29 @@ export default function Booking() {
       cancelled = true;
     };
   }, [promoId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get("/discounts")
+      .then((res) => {
+        if (cancelled) return;
+        const now = new Date();
+        const active = (res.data || []).filter(
+          (d) =>
+            d.is_active !== false &&
+            (!d.starts_at || new Date(d.starts_at) <= now) &&
+            (!d.ends_at || new Date(d.ends_at) >= now)
+        );
+        setAvailableDiscounts(active);
+      })
+      .catch(() => {
+        if (!cancelled) setAvailableDiscounts([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -89,13 +128,6 @@ export default function Booking() {
       clearPoll();
     };
   }, [movieName]);
-
-  const clearPoll = () => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
-  };
 
   const selectedShowtime = showtimes.find((st) => st.id === selectedShowtimeId) || null;
 
@@ -134,10 +166,8 @@ export default function Booking() {
     }
   }, [groupedShowtimes.length]);
 
-  const roomId = selectedShowtime?.room?.id ?? null;
-
   useEffect(() => {
-    if (!roomId) {
+    if (!selectedShowtimeId) {
       setSeats([]);
       setSelectedSeats([]);
       return;
@@ -145,14 +175,13 @@ export default function Booking() {
     let cancelled = false;
     setLoadingSeats(true);
     api
-      .get("/seats")
+      .get(`/showtimes/${selectedShowtimeId}/seats`)
       .then((res) => {
         if (cancelled) return;
-        const all = res.data || [];
-        setSeats(all.filter((s) => s.cinema_room_id === roomId));
+        setSeats(res.data?.seats || []);
       })
       .catch(() => {
-        if (!cancelled) setErrorMsg("Failed to load seats for this room.");
+        if (!cancelled) setErrorMsg("Failed to load seats for this showtime.");
       })
       .finally(() => {
         if (!cancelled) setLoadingSeats(false);
@@ -160,12 +189,12 @@ export default function Booking() {
     return () => {
       cancelled = true;
     };
-  }, [roomId]);
+  }, [selectedShowtimeId]);
 
   const seatsByRow = useMemo(() => {
     const map = {};
     seats.forEach((s) => {
-      const row = (s.seat_number || "").replace(/[0-9]/g, "") || "?";
+      const row = s.row || (s.seat_number || "").replace(/[0-9]/g, "") || "?";
       if (!map[row]) map[row] = [];
       map[row].push(s);
     });
@@ -194,12 +223,61 @@ export default function Booking() {
     return Math.round(subtotal * (promoRate / 100) * 100) / 100;
   }, [promoRate, subtotal]);
 
-  const totalAmount = useMemo(() => Math.round((subtotal - discountAmount) * 100) / 100, [subtotal, discountAmount]);
-
-  const currency = selectedShowtime ? currencySymbol("USD") : "$";
   const displayCurrency = selectedShowtime?.payment_currency || "USD";
 
+  const renderPrice = (amount) => `${currencySymbol(displayCurrency)}${Number(amount || 0).toFixed(2)}`;
+
+  const discountValid = useMemo(() => {
+    if (!appliedDiscount) return false;
+    if (appliedDiscount.min_amount != null && subtotal < parseFloat(appliedDiscount.min_amount)) {
+      return false;
+    }
+    return true;
+  }, [appliedDiscount, subtotal]);
+
+  const discountCodeAmount = useMemo(() => {
+    if (!discountValid) return 0;
+    let amount;
+    if (appliedDiscount.type === "fixed") {
+      amount = parseFloat(appliedDiscount.value) || 0;
+    } else {
+      amount = Math.round(subtotal * ((parseFloat(appliedDiscount.value) || 0) / 100) * 100) / 100;
+    }
+    if (appliedDiscount.max_discount != null) {
+      amount = Math.min(amount, parseFloat(appliedDiscount.max_discount) || 0);
+    }
+    const base = Math.max(0, subtotal - discountAmount);
+    amount = Math.round(amount * 100) / 100;
+    if (amount <= 0 || amount >= base) return 0;
+    return amount;
+  }, [appliedDiscount, subtotal, discountValid, discountAmount]);
+
+  const totalAmount = useMemo(() =>
+    Math.max(0, Math.round((subtotal - discountAmount - discountCodeAmount) * 100) / 100),
+    [subtotal, discountAmount, discountCodeAmount]
+  );
+
+  const applyDiscount = () => {
+    const code = (discountInput || "").trim();
+    if (!code) return;
+    const match = availableDiscounts.find((d) => String(d.code).toUpperCase() === code.toUpperCase());
+    if (!match) {
+      setAppliedDiscount(null);
+      setDiscountError("That discount code is invalid or expired.");
+      return;
+    }
+    if (match.min_amount != null && subtotal < parseFloat(match.min_amount)) {
+      setAppliedDiscount(null);
+      setDiscountError(`This discount requires a minimum order of ${renderPrice(match.min_amount)}.`);
+      return;
+    }
+    setAppliedDiscount(match);
+    setDiscountError("");
+  };
+
   const toggleSeat = (seatId) => {
+    const seat = seats.find((s) => s.id === seatId);
+    if (seat?.occupied) return;
     setSelectedSeats((prev) =>
       prev.includes(seatId) ? prev.filter((id) => id !== seatId) : [...prev, seatId]
     );
@@ -221,6 +299,7 @@ export default function Booking() {
         showtime_id: selectedShowtimeId,
         seat_ids: selectedSeats,
         ...(activePromo && promoRate > 0 ? { promotion_id: Number(promoId) } : {}),
+        ...(appliedDiscount ? { discount_code: appliedDiscount.code } : {}),
       });
       const data = res.data;
       const pay = data.payment;
@@ -234,15 +313,31 @@ export default function Booking() {
       setBooking(data);
       setPayment(pay);
       setPaymentStatus("pending");
+      setPaymentError("");
       setStep(2);
+      setShowPaymentModal(true);
     } catch (err) {
+      const data = err?.response?.data || {};
       const msg =
-        err?.response?.data?.message ||
-        err?.response?.data?.errors?.[0] ||
+        data.message ||
+        data.errors?.[0] ||
         "Could not create booking. Check your Bakong account configuration.";
       setErrorMsg(msg);
       setPaymentError(msg);
-      setStep(2);
+
+      const bookedIds = data.booked_seat_ids;
+      if (Array.isArray(bookedIds) && bookedIds.length) {
+        setSelectedSeats((prev) => prev.filter((id) => !bookedIds.includes(id)));
+        setStep(1);
+        try {
+          const seatsRes = await api.get(`/showtimes/${selectedShowtimeId}/seats`);
+          setSeats(seatsRes.data?.seats || []);
+        } catch {
+          // keep the previous seat map if refresh fails
+        }
+      } else {
+        setStep(2);
+      }
     } finally {
       setCreating(false);
     }
@@ -250,70 +345,100 @@ export default function Booking() {
 
   const checkPayment = async () => {
     if (!booking?.id) return;
+    setChecking(true);
     try {
       const res = await api.get(`/bookings/${booking.id}/payment`);
-      const status = res.data.payment_status;
-      setPaymentStatus(status);
-      if (status === "confirmed") {
+      const { payment_status, message, verification_error } = res.data;
+      setPaymentStatus(payment_status);
+      if (payment_status === "confirmed") {
         clearPoll();
+        setPaymentError("");
         setSuccess(res.data.booking || booking);
+        setShowPaymentModal(false);
         setStep(3);
+        return;
+      }
+      if (verification_error) {
+        clearPoll();
+        setPaymentError(
+          message ||
+            "Could not verify payment automatically. Your booking stays pending until a staff member verifies the payment."
+        );
       }
     } catch (err) {
       const msg = err?.response?.data?.message || "Could not check payment.";
       setPaymentError(msg);
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const refreshPayment = async () => {
+    if (!booking?.id) return;
+    setRefreshing(true);
+    setPaymentError("");
+    try {
+      const res = await api.post(`/bookings/${booking.id}/payment/refresh`);
+      if (res.data?.payment_status === "confirmed") {
+        clearPoll();
+        setPaymentStatus("confirmed");
+        setPaymentError("");
+        setSuccess(res.data.booking || booking);
+        setShowPaymentModal(false);
+        setStep(3);
+        return;
+      }
+      const np = res.data?.payment || {};
+      setPayment((prev) =>
+        prev
+          ? {
+              ...prev,
+              qr: np.qr,
+              md5: np.md5,
+              amount: np.amount ?? prev.amount,
+              currency: np.currency ?? prev.currency,
+              expires_at: np.expires_at,
+            }
+          : prev
+      );
+      setPaymentStatus("pending");
+    } catch (err) {
+      setPaymentError(
+        err?.response?.data?.message || "Could not generate a new payment code."
+      );
+    } finally {
+      setRefreshing(false);
     }
   };
 
   useEffect(() => {
     if (step === 2 && paymentStatus === "pending" && booking?.id) {
       clearPoll();
-      pollRef.current = setInterval(checkPayment, 3000);
+      pollRef.current = setInterval(checkPayment, 15000);
       return () => clearPoll();
     }
   }, [step, paymentStatus, booking?.id]);
 
-  useEffect(() => {
-    if (payment?.expires_at && paymentStatus === "pending") {
-      const expiry = new Date(payment.expires_at).getTime();
-      if (expiry - Date.now() <= 0) setExpired(true);
-      const t = setTimeout(() => setExpired(true), Math.max(expiry - Date.now(), 0));
-      return () => clearTimeout(t);
-    }
-  }, [payment, paymentStatus]);
-
-  const maxSteps = steps.length - 1;
-
-  const goNext = () => {
-    if (step === 0 && !selectedShowtimeId) return;
-    if (step === 1 && selectedSeats.length === 0) return;
-    setStep((s) => Math.min(s + 1, maxSteps));
-  };
-
-  const renderPrice = (amount) => `${currencySymbol(displayCurrency)}${Number(amount || 0).toFixed(2)}`;
-
   return (
-    <div className="bg-[var(--app-page)] text-[var(--app-ink)] min-h-screen flex flex-col font-['Mulish','Kantumruy_Pro',-apple-system,BlinkMacSystemFont,'Segoe_UI',sans-serif]">
-      <header className="sticky top-0 z-[100] bg-[var(--app-header)] backdrop-blur-[12px] border-b border-[var(--app-edge)] flex items-center justify-between px-7 h-[68px] gap-4 max-md:px-4">
-        <Link to="/" className="flex items-center gap-2.5 no-underline shrink-0">
-          <span className="text-[26px]"></span>
-          <span className="text-lg font-[800] tracking-[2px] text-[var(--app-ink)] group/b">KHMER <b className="text-[#e50914]">CINEMA</b></span>
-        </Link>
-        <nav className="flex items-center gap-1.5 flex-1 justify-center max-md:hidden">
-          {steps.map((s, i) => (
-            <div key={s} className={`flex items-center gap-2 px-3 py-1.5 rounded-[20px] text-[13px] font-[700] transition-all duration-200 ${i === step ? "text-[var(--app-ink)]" : ""} ${i < step ? "text-[#22c55e]" : ""} ${i >= step ? "text-[var(--app-mute)]" : ""}`}>
-              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0 ${i === step ? "bg-[#e50914] text-white shadow-[0_0_0_4px_rgba(229,9,20,0.2)]" : ""} ${i < step ? "bg-[rgba(34,197,94,0.2)] text-[#22c55e]" : ""} ${i >= step && i > step ? "bg-[var(--app-panel2)]" : ""}`}>{i < step ? "✓" : i + 1}</span>
-              <span>{s}</span>
-            </div>
-          ))}
-        </nav>
-        <button className="bg-transparent border border-[var(--app-edge2)] text-[var(--app-ink2)] px-3.5 py-2 text-[13px] font-[700] cursor-pointer shrink-0 transition-all duration-200 rounded-[10px] hover:text-[var(--app-ink)] hover:border-[var(--app-edge2)]" onClick={() => navigate(-1)}>← Back</button>
-      </header>
+    <div className="bg-[var(--app-page)] text-[var(--app-ink)] font-['Mulish','Kantumruy_Pro',-apple-system,BlinkMacSystemFont,'Segoe_UI',sans-serif]">
+      <main className="max-w-[1020px] w-full mx-auto px-4 sm:px-7 pb-10 sm:pb-14 pt-24 sm:pt-28 md:pt-32 flex flex-col gap-6">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <button className="inline-flex items-center gap-2 bg-[var(--app-panel)] border border-[var(--app-edge)] text-[var(--app-ink2)] py-2.5 pl-3 pr-4 rounded-full text-[13px] font-bold cursor-pointer transition-all duration-200 hover:text-white hover:bg-brand hover:border-brand hover:shadow-[0_6px_18px_rgba(229,9,20,0.35)]" onClick={() => navigate(-1)}>
+            <ArrowLeft size={16} />
+            Back
+          </button>
+          <nav className="flex items-center gap-1.5 flex-wrap justify-end">
+            {steps.map((s, i) => (
+              <div key={s} className={`flex items-center gap-2 px-3 py-1.5 rounded-[20px] text-[13px] font-[700] transition-all duration-200 ${i === step ? "text-[var(--app-ink)]" : ""} ${i < step ? "text-[#22c55e]" : ""} ${i >= step ? "text-[var(--app-mute)]" : ""}`}>
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0 ${i === step ? "bg-[#e50914] text-white shadow-[0_0_0_4px_rgba(229,9,20,0.2)]" : ""} ${i < step ? "bg-[rgba(34,197,94,0.2)] text-[#22c55e]" : ""} ${i >= step && i > step ? "bg-[var(--app-panel2)]" : ""}`}>{i < step ? "✓" : i + 1}</span>
+                <span className="max-md:hidden">{s}</span>
+              </div>
+            ))}
+          </nav>
+        </div>
 
-      <main className="flex-1 max-w-[1020px] w-full mx-auto p-7 flex flex-col gap-6">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3.5">
-            <span className="bg-[rgba(229,9,20,0.14)] text-[#e50914] border border-[rgba(229,9,20,0.3)] px-3 py-2 text-sm font-[800] rounded-[10px] shrink-0">Movies</span>
             <div>
               <h1 className="text-[26px] font-[800] max-md:text-[20px]">{movieName}</h1>
               <p className="text-[var(--app-mute)] text-sm mt-1">
@@ -435,6 +560,16 @@ export default function Booking() {
                 })}
               </div>
             )}
+
+            <div className="flex justify-end mt-6">
+              <button
+                className="bg-[#e50914] text-white shadow-[0_4px_14px_rgba(229,9,20,0.35)] border-none cursor-pointer px-[22px] py-3 text-sm font-[700] rounded-xl transition-all duration-200 hover:bg-[#f40612] hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:translate-y-0"
+                disabled={!selectedShowtimeId}
+                onClick={() => setStep(1)}
+              >
+                Select Seats →
+              </button>
+            </div>
           </div>
         )}
 
@@ -457,15 +592,16 @@ export default function Booking() {
                       <span className="w-[22px] text-xs text-[var(--app-mute)] text-center font-[700]">{row}</span>
                       {rowSeats.map((seat) => {
                         const isSel = selectedSeats.includes(seat.id);
-                        const isOccupied = seat.status === "occupied";
+                        const isOccupied = seat.occupied === true;
                         return (
                           <button
                             key={seat.id}
-                            className={`w-[30px] h-[26px] rounded-md border text-[10px] flex items-center justify-center transition-all duration-[150ms] ${isOccupied ? "bg-[var(--app-edge2)] border-[var(--app-edge2)] cursor-not-allowed text-[var(--app-ink2)] hover:bg-[var(--app-edge2)] hover:border-[var(--app-edge2)]" : isSel ? "bg-[#e50914] border-[#e50914] text-white shadow-[0_0_8px_rgba(229,9,20,0.5)]" : seat.seat_type === "vip" ? "border-[#d4a017] bg-[#2a2410] text-[#666] cursor-pointer hover:border-[#d4a017]" : seat.seat_type === "couple" ? "border-[#a855f7] bg-[#2a1238] text-[#666] cursor-pointer hover:border-[#a855f7]" : "border-[var(--app-edge2)] bg-[var(--app-panel2)] text-[var(--app-mute)] cursor-pointer hover:border-[#e50914] hover:bg-[var(--app-edge)]"}`}
+                            disabled={isOccupied}
+                            className={`w-[30px] h-[26px] rounded-md border text-[10px] flex items-center justify-center transition-all duration-[150ms] ${isOccupied ? "bg-[rgba(229,9,20,0.15)] border-[rgba(229,9,20,0.45)] cursor-not-allowed text-[#e50914] opacity-60" : isSel ? "bg-[#e50914] border-[#e50914] text-white shadow-[0_0_8px_rgba(229,9,20,0.5)]" : seat.seat_type === "vip" ? "border-[#d4a017] bg-[#2a2410] text-[#666] cursor-pointer hover:border-[#d4a017]" : seat.seat_type === "couple" ? "border-[#a855f7] bg-[#2a1238] text-[#666] cursor-pointer hover:border-[#a855f7]" : "border-[var(--app-edge2)] bg-[var(--app-panel2)] text-[var(--app-mute)] cursor-pointer hover:border-[#e50914] hover:bg-[var(--app-edge)]"}`}
                             onClick={() => toggleSeat(seat.id)}
-                            title={seat.seat_number}
+                            title={`${seat.seat_number}${isOccupied ? " (occupied)" : ""}`}
                           >
-                            {seat.seat_number.replace(row, "")}
+                            {(seat.seat_number || "").replace(row, "")}
                           </button>
                         );
                       })}
@@ -475,6 +611,7 @@ export default function Booking() {
                 <div className="flex gap-5 justify-center mt-[18px] flex-wrap">
                   <span className="flex items-center gap-2 text-[13px] text-[var(--app-mute)] font-[600]"><i className="w-4 h-4 rounded-[5px] inline-block bg-[var(--app-panel2)] border border-[var(--app-edge2)]" /> Available</span>
                   <span className="flex items-center gap-2 text-[13px] text-[var(--app-mute)] font-[600]"><i className="w-4 h-4 rounded-[5px] inline-block bg-[#e50914]" /> Selected</span>
+                  <span className="flex items-center gap-2 text-[13px] text-[var(--app-mute)] font-[600]"><i className="w-4 h-4 rounded-[5px] inline-block bg-[rgba(229,9,20,0.15)] border border-[rgba(229,9,20,0.45)]" /> Occupied</span>
                   <span className="flex items-center gap-2 text-[13px] text-[var(--app-mute)] font-[600]"><i className="w-4 h-4 rounded-[5px] inline-block bg-[#2a2410] border border-[#d4a017]" /> VIP</span>
                   <span className="flex items-center gap-2 text-[13px] text-[var(--app-mute)] font-[600]"><i className="w-4 h-4 rounded-[5px] inline-block bg-[#2a1238] border border-[#a855f7]" /> Couple</span>
                 </div>
@@ -482,102 +619,286 @@ export default function Booking() {
             )}
 
             {errorMsg && <p className="text-[#e50914] text-[13px] font-[700] mt-4"><TriangleAlert size={16} /> {errorMsg}</p>}
+
+            <div className="flex items-center justify-between gap-3 mt-6 flex-wrap">
+              <button
+                className="bg-transparent text-[var(--app-ink2)] border border-[var(--app-edge2)] cursor-pointer px-[18px] py-3 text-sm font-[700] rounded-xl transition-all duration-200 hover:bg-[var(--app-fill)] hover:border-[var(--app-edge2)]"
+                onClick={() => setStep(0)}
+              >
+                ← Back
+              </button>
+              <button
+                className="bg-[#e50914] text-white shadow-[0_4px_14px_rgba(229,9,20,0.35)] border-none cursor-pointer px-[22px] py-3 text-sm font-[700] rounded-xl transition-all duration-200 hover:bg-[#f40612] hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:translate-y-0"
+                disabled={selectedSeats.length === 0}
+                onClick={() => setStep(2)}
+              >
+                Continue to Receipt → · {renderPrice(totalAmount)}
+              </button>
+            </div>
           </div>
         )}
 
         {step === 2 && (
-          <div className="bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-2xl p-[26px] grid grid-cols-2 gap-7 max-md:grid-cols-1">
-            <div>
-              <h2 className="text-lg font-[800] mb-[18px]">3. Confirm</h2>
-              <div className="flex flex-col">
-                <div className="flex justify-between py-3 border-b border-[var(--app-edge)] text-sm gap-4"><span className="text-[var(--app-mute)]">Movie</span><b className="text-[var(--app-ink)] text-right">{movieName}</b></div>
-                <div className="flex justify-between py-3 border-b border-[var(--app-edge)] text-sm gap-4">
-                  <span className="text-[var(--app-mute)]">Showtime</span>
-                  <b className="text-[var(--app-ink)] text-right">{selectedShowtime ? new Date(selectedShowtime.start_time).toLocaleString() : "-"}</b>
+          <div className="grid grid-cols-[1.05fr_0.95fr] gap-6 max-md:grid-cols-1">
+            {/* Receipt */}
+            <div className="bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-2xl overflow-hidden">
+              <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-dashed border-[var(--app-edge2)]">
+                <span className="w-10 h-10 rounded-xl bg-brand/10 border border-brand/25 text-brand flex items-center justify-center shrink-0">
+                  <Receipt size={18} />
+                </span>
+                <div>
+                  <h2 className="text-base font-[800] leading-none">Your Receipt</h2>
+                  <p className="text-[12px] text-[var(--app-mute)] font-[600] mt-1">
+                    Review your order before payment
+                  </p>
                 </div>
-                <div className="flex justify-between py-3 border-b border-[var(--app-edge)] text-sm gap-4"><span className="text-[var(--app-mute)]">Room</span><b className="text-[var(--app-ink)] text-right">{selectedShowtime?.room?.name || "-"}</b></div>
-                <div className="flex justify-between py-3 border-b border-[var(--app-edge)] text-sm gap-4">
-                  <span className="text-[var(--app-mute)]">Seats</span>
-                  <b className="text-[var(--app-ink)] text-right">
-                    {selectedShowtime && seats.filter((s) => selectedSeats.includes(s.id))
-                      .map((s) => formatSeat(s.seat_number)).join(", ")}
-                  </b>
+              </div>
+
+              <div className="px-6 py-5 flex flex-col">
+                <div className="pb-4">
+                  <div className="text-[11px] font-[800] uppercase tracking-[0.14em] text-[var(--app-mute)]">Movie</div>
+                  <div className="text-[20px] font-[800] text-[var(--app-ink)] mt-1 leading-tight">{movieName}</div>
                 </div>
-                <div className="flex justify-between py-3 border-b border-[var(--app-edge)] text-sm gap-4"><span className="text-[var(--app-mute)]">Tickets</span><b className="text-[var(--app-ink)] text-right">{selectedSeats.length}</b></div>
+
+                <div className="flex flex-col text-sm">
+                  <div className="flex justify-between py-2.5 border-b border-[var(--app-edge)] gap-4">
+                    <span className="text-[var(--app-mute)] font-[600]">Cinema</span>
+                    <b className="text-[var(--app-ink)] text-right">{selectedShowtime?.room?.cinema?.name || "-"}</b>
+                  </div>
+                  <div className="flex justify-between py-2.5 border-b border-[var(--app-edge)] gap-4">
+                    <span className="text-[var(--app-mute)] font-[600]">Room</span>
+                    <b className="text-[var(--app-ink)] text-right">{selectedShowtime?.room?.name || "-"}</b>
+                  </div>
+                  <div className="flex justify-between py-2.5 border-b border-[var(--app-edge)] gap-4">
+                    <span className="text-[var(--app-mute)] font-[600]">Showtime</span>
+                    <b className="text-[var(--app-ink)] text-right">{selectedShowtime ? new Date(selectedShowtime.start_time).toLocaleString() : "-"}</b>
+                  </div>
+                </div>
+
+                <div className="pt-4">
+                  <div className="text-[11px] font-[800] uppercase tracking-[0.14em] text-[var(--app-mute)] mb-2">
+                    Seats ({selectedSeats.length})
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {seats
+                      .filter((s) => selectedSeats.includes(s.id))
+                      .map((s) => (
+                        <span
+                          key={s.id}
+                          className="inline-flex items-center gap-1.5 bg-[rgba(229,9,20,0.12)] border border-[rgba(229,9,20,0.3)] text-[#e50914] px-3 py-1.5 rounded-lg text-[13px] font-[800]"
+                        >
+                          <DoorOpen size={13} /> {formatSeat(s.seat_number)}
+                        </span>
+                      ))}
+                  </div>
+</div>
+            </div>
+
+              <div className="px-6 pt-5 pb-5 border-b border-dashed border-[var(--app-edge2)]">
+                <div className="text-[11px] font-[800] uppercase tracking-[0.14em] text-[var(--app-mute)] mb-2">
+                  Discount code
+                </div>
+                {appliedDiscount ? (
+                  <>
+                    <div className="flex items-center justify-between gap-3 rounded-xl border border-[rgba(34,197,94,0.35)] bg-[rgba(34,197,94,0.1)] px-3.5 py-2.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <BadgePercent size={16} className="text-[#22c55e] shrink-0" />
+                        <div className="min-w-0">
+                          <div className="text-[13px] font-[800] text-[#1f9d55] truncate">
+                            {appliedDiscount.code}{appliedDiscount.name ? ` · ${appliedDiscount.name}` : ""}
+                          </div>
+                          <div className="text-[11px] text-[var(--app-ink2)] font-[600]">
+                            {appliedDiscount.type === "fixed"
+                              ? `${renderPrice(appliedDiscount.value)} off`
+                              : `${appliedDiscount.value}% off`}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        className="bg-transparent border-none cursor-pointer text-[#e50914] text-[12px] font-[800] hover:underline"
+                        onClick={() => { setAppliedDiscount(null); setDiscountInput(""); setDiscountError(""); }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    {!discountValid && appliedDiscount.min_amount != null && (
+                      <p className="mt-2 text-[#e50914] text-[12px] font-[700]">
+                        This discount requires a minimum order of {renderPrice(appliedDiscount.min_amount)} — remove it or add more seats.
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="flex gap-2">
+                      <input
+                        className="flex-1 min-w-0 bg-[var(--app-panel2)] border border-[var(--app-edge)] rounded-xl px-3.5 py-2.5 text-[13px] text-[var(--app-ink)] outline-none transition-colors duration-200 focus:border-[#e50914]"
+                        placeholder="Enter code (e.g. WELCOME20)"
+                        value={discountInput}
+                        onChange={(e) => setDiscountInput(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyDiscount(); } }}
+                      />
+                      <button
+                        className="shrink-0 bg-[var(--app-fill)] hover:bg-brand hover:text-white border border-[var(--app-edge2)] text-[var(--app-ink2)] px-4 py-2.5 rounded-xl text-[13px] font-[800] cursor-pointer transition-all duration-200"
+                        onClick={applyDiscount}
+                      >
+                        Apply
+                      </button>
+                    </div>
+                    {discountError && (
+                      <p className="mt-2 text-[#e50914] text-[12px] font-[700]">{discountError}</p>
+                    )}
+                  </>
+                )}
+              </div>
+
+              <div className="mx-6 border-t-2 border-dashed border-[var(--app-edge2)]" />
+
+              <div className="px-6 py-5 flex flex-col gap-2.5 text-sm bg-[var(--app-panel2)]/60">
+                <div className="flex justify-between gap-4">
+                  <span className="text-[var(--app-mute)] font-[600]">
+                    Tickets × {selectedSeats.length}
+                  </span>
+                  <b className="text-[var(--app-ink)]">{renderPrice(subtotal)}</b>
+                </div>
                 {activePromo && promoRate > 0 && (
-                  <div className="flex justify-between py-3 border-b border-[var(--app-edge)] text-sm gap-4">
-                    <span className="text-[var(--app-mute)] flex items-center gap-1.5">
-                      <Ticket size={14} className="text-[#22c55e]" />
-                      {activePromo.title}
-                      <span className="text-[#22c55e] font-[800]">({promoRate}% off)</span>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-[var(--app-mute)] font-[600] inline-flex items-center gap-1.5">
+                      <BadgePercent size={14} className="text-[#22c55e]" />
+                      {activePromo.title} ({promoRate}% off)
                     </span>
-                    <b className="text-[#22c55e] text-right">-{renderPrice(discountAmount)}</b>
+                    <b className="text-[#22c55e]">-{renderPrice(discountAmount)}</b>
                   </div>
                 )}
-                <div className="flex justify-between pt-4 text-sm gap-4"><span className="font-[700] text-[var(--app-ink)]">Total</span><b className="text-[#e50914] text-[22px] text-right">{renderPrice(totalAmount)}</b></div>
+                {discountCodeAmount > 0 && (
+                  <div className="flex justify-between gap-4">
+                    <span className="text-[var(--app-mute)] font-[600] inline-flex items-center gap-1.5">
+                      <BadgePercent size={14} className="text-[#22c55e]" />
+                      {appliedDiscount.code} ({appliedDiscount.type === "fixed" ? "fixed" : `${appliedDiscount.value}%`} off)
+                    </span>
+                    <b className="text-[#22c55e]">-{renderPrice(discountCodeAmount)}</b>
+                  </div>
+                )}
+                <div className="flex items-center justify-between gap-4 pt-3 mt-1 border-t border-[var(--app-edge)]">
+                  <span className="font-[800] text-[var(--app-ink)]">Total</span>
+                  <b className="text-[#e50914] text-[24px]">{renderPrice(totalAmount)}</b>
+                </div>
               </div>
             </div>
 
-            <div>
-              <h2 className="text-lg font-[800] mb-[18px]">Pay with Bakong</h2>
+            {/* Payment */}
+            <div className="bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-2xl p-6 flex flex-col">
+              <div className="flex items-center gap-3">
+                <span className="w-10 h-10 rounded-xl bg-brand/10 border border-brand/25 text-brand flex items-center justify-center shrink-0">
+                  <CreditCard size={18} />
+                </span>
+                <div>
+                  <h2 className="text-base font-[800] leading-none">Payment</h2>
+                  <p className="text-[12px] text-[var(--app-mute)] font-[600] mt-1">
+                    Secure checkout with Bakong
+                  </p>
+                </div>
+              </div>
 
-              {selectedSeats.length > 0 && creating && (
-                <div className="flex items-center gap-2.5 text-[var(--app-mute)] text-sm font-[700] py-[18px]"><Loader2 className="animate-spin" size={18} /> Creating booking & payment code...</div>
-              )}
+              <div className="mt-6 flex flex-col items-center justify-center flex-1 text-center gap-3 rounded-2xl border border-dashed border-[var(--app-edge2)] bg-[var(--app-panel2)]/50 px-5 py-8">
+                {!booking && (
+                  <>
+                    <ScanLine size={34} className="text-brand" />
+                    <p className="text-[13px] text-[var(--app-mute)] font-[600] max-w-[240px] leading-relaxed">
+                      Tap confirm to generate a Bakong QR code and complete your payment.
+                    </p>
+                  </>
+                )}
 
-              {booking && payment && (
-                <div className="flex flex-col gap-3.5 mt-1.5">
-                  {paymentStatus === "pending" && !expired && (
-                    <div className="bg-white rounded-[14px] p-5 flex flex-col items-center gap-3.5 max-[600px]:p-3.5">
-                      <div className="flex items-center gap-2 text-[#111] text-[13px] font-[800]"><ScanLine size={16} /> Scan with Bakong App</div>
-                      <QRCodeSVG value={payment.qr} size={220} level="M" />
-                      <div className="text-[#111] text-[20px] font-[800] flex flex-col items-center gap-0.5">
-                        {renderPrice(payment.amount || totalAmount)}
-                        <span className="text-[#666] text-xs font-[600]">Merchant: Khmer Cinema</span>
-                      </div>
+                {booking && paymentStatus === "pending" && (
+                  <>
+                    <span className="w-14 h-14 rounded-full bg-brand/10 border border-brand/25 text-brand flex items-center justify-center">
+                      <ScanLine size={24} />
+                    </span>
+                    <div>
+                      <div className="text-[15px] font-[800] text-[var(--app-ink)]">QR code ready</div>
+                      <p className="text-[12px] text-[var(--app-mute)] font-[600] mt-1 max-w-[230px] leading-relaxed">
+                        Reopen the payment window to scan with your Bakong app.
+                      </p>
                     </div>
-                  )}
+                  </>
+                )}
 
-                  {expired && (
-                    <div className="flex items-start gap-2.5 bg-[rgba(229,9,20,0.1)] border border-[rgba(229,9,20,0.3)] text-[#f87171] px-3.5 py-3 rounded-[10px] text-[13px] font-[600] leading-relaxed">
-                      <TriangleAlert size={18} />
-                      <p className="m-0">This QR code expired. Please go back and generate a new one.</p>
-                    </div>
-                  )}
+                {!booking && selectedSeats.length === 0 && (
+                  <p className="text-[#e50914] text-[13px] font-[700]">
+                    Please select at least one seat first.
+                  </p>
+                )}
+              </div>
 
-                  {paymentError && (
-                    <div className="flex items-start gap-2.5 bg-[rgba(229,9,20,0.1)] border border-[rgba(229,9,20,0.3)] text-[#f87171] px-3.5 py-3 rounded-[10px] text-[13px] font-[600] leading-relaxed">
-                      <TriangleAlert size={18} />
-                      <p className="m-0">{paymentError}</p>
-                    </div>
-                  )}
-
-                  {paymentStatus === "pending" && !expired && (
-                    <div className="flex items-start gap-2.5 bg-[rgba(34,197,94,0.1)] border border-[rgba(34,197,94,0.25)] text-[#6ee7a8] px-3.5 py-3 rounded-[10px] text-[13px] font-[600] leading-relaxed">
-                      <Loader2 className="animate-spin" size={16} />
-                      <p className="m-0">Waiting for payment confirmation... Open the Bakong app and scan the QR code.</p>
-                    </div>
-                  )}
+              {paymentError && (
+                <div className="mt-4 flex items-start gap-2.5 bg-[rgba(229,9,20,0.1)] border border-[rgba(229,9,20,0.3)] text-[#f87171] px-4 py-3 rounded-xl text-[13px] font-[600] leading-relaxed">
+                  <TriangleAlert size={17} className="shrink-0 mt-0.5" />
+                  <p className="m-0">{paymentError}</p>
                 </div>
               )}
 
-              {!booking && selectedSeats.length === 0 && (
-                <p className="text-[#e50914] text-[13px] font-[700] mt-4">Please select at least one seat first.</p>
-              )}
-          </div>
+              <div className="mt-6 flex flex-col gap-2.5">
+                {!booking && (
+                  <button
+                    className="w-full inline-flex items-center justify-center gap-2 bg-[#e50914] text-white shadow-[0_6px_18px_rgba(229,9,20,0.35)] border-none cursor-pointer px-[22px] py-3.5 text-sm font-[800] rounded-xl transition-all duration-200 hover:bg-[#f40612] hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:translate-y-0"
+                    disabled={selectedSeats.length === 0 || creating}
+                    onClick={startPayment}
+                  >
+                    {creating ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" /> Creating payment code...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 size={16} /> Confirm &amp; Pay · {renderPrice(totalAmount)}
+                      </>
+                    )}
+                  </button>
+                )}
+
+                {booking && paymentStatus === "pending" && (
+                  <button
+                    className="w-full inline-flex items-center justify-center gap-2 bg-[#e50914] text-white shadow-[0_6px_18px_rgba(229,9,20,0.35)] border-none cursor-pointer px-[22px] py-3.5 text-sm font-[800] rounded-xl transition-all duration-200 hover:bg-[#f40612] hover:-translate-y-0.5"
+                    onClick={() => setShowPaymentModal(true)}
+                  >
+                    <ScanLine size={16} /> Show Bakong QR Code
+                  </button>
+                )}
+
+                <button
+                  className="w-full bg-transparent text-[var(--app-ink2)] border border-[var(--app-edge2)] cursor-pointer px-[18px] py-3 text-sm font-[700] rounded-xl transition-all duration-200 hover:bg-[var(--app-fill)]"
+                  onClick={() => setStep(1)}
+                >
+                  ← Back to Seats
+                </button>
+              </div>
+
+              <p className="mt-4 text-[11px] text-[var(--app-mute)] font-[600] text-center leading-relaxed">
+                Your tickets will be issued automatically once payment is confirmed.
+              </p>
+            </div>
           </div>
         )}
 
-        {step === 3 && success && (
-          <div className="bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-2xl p-[26px] text-center py-10">
-            <div className="text-[64px] mb-2.5"><Ticket size={40} /></div>
-            <h2 className="text-[26px] font-[800]">Booking Confirmed!</h2>
-            <p className="text-[var(--app-mute)] mt-2 text-sm">Payment received. Show these tickets at the entrance.</p>
 
-            <div className="max-w-[420px] mx-auto mt-7 bg-[var(--app-panel2)] border border-[var(--app-edge2)] rounded-2xl overflow-hidden flex">
+        {step === 3 && success && (
+          <div className="bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-2xl p-[26px]">
+            <div className="text-center">
+              <span className="inline-flex w-16 h-16 rounded-2xl bg-[rgba(34,197,94,0.14)] border border-[rgba(34,197,94,0.35)] text-[#22c55e] items-center justify-center mb-3">
+                <CheckCircle2 size={34} />
+              </span>
+              <h2 className="text-[26px] font-[800]">Booking Confirmed!</h2>
+              <p className="text-[var(--app-mute)] mt-2 text-sm">
+                Payment received — {(success.tickets || []).length} ticket
+                {(success.tickets || []).length !== 1 ? "s" : ""} issued. Show at the entrance.
+              </p>
+            </div>
+
+            <div className="max-w-[460px] mx-auto mt-7 bg-[var(--app-panel2)] border border-[var(--app-edge2)] rounded-2xl overflow-hidden flex">
               <div className="flex-1 p-6 text-left">
                 <div className="text-[20px] font-[800] mb-2">{movieName}</div>
                 <div className="text-[var(--app-mute)] text-[13px] mb-1">
+                  {success.showtime?.room?.cinema?.name ? `${success.showtime.room.cinema.name} · ` : ""}
                   {success.showtime?.room?.name || selectedShowtime?.room?.name || ""}
                   {success.showtime?.start_time && ` · ${new Date(success.showtime.start_time).toLocaleString()}`}
                 </div>
@@ -589,11 +910,50 @@ export default function Booking() {
                   ))}
                 </div>
               </div>
-              <div className="border-l-2 border-dashed border-[var(--app-edge2)] flex flex-col justify-center items-center gap-3 px-5 min-w-[120px] bg-[var(--app-panel2)]">
+              <div className="border-l-2 border-dashed border-[var(--app-edge2)] flex flex-col justify-center items-center gap-3 px-5 min-w-[130px] bg-[var(--app-panel2)]">
                 <div className="font-mono text-base font-[800] text-[#22c55e] tracking-wide">{success.booking_code || `#${success.id}`}</div>
                 <div className="text-[22px] font-[800] text-[var(--app-ink)]">{renderPrice(success.total_amount)}</div>
               </div>
             </div>
+
+            {(success.tickets || []).length > 0 && (
+              <>
+                <h3 className="mt-8 text-center text-[15px] font-[800] text-[var(--app-ink)]">
+                  Your tickets ({success.tickets.length}) — scan at the entrance
+                </h3>
+                <div className="max-w-[720px] mx-auto mt-4 flex flex-col gap-6">
+                  {success.tickets.map((tk) => {
+                    const bs =
+                      (success.booking_seats || []).find(
+                        (b) => b.id === tk.booking_seat_id
+                      ) || null;
+                    return (
+                      <div key={tk.id} className="flex flex-col items-center gap-3">
+                        <div ref={(el) => { ticketRefs.current[tk.id] = el; }}>
+                          <TicketCard
+                            movie={movieName}
+                            cinema={success.showtime?.room?.cinema?.name}
+                            room={success.showtime?.room?.name}
+                            startTime={success.showtime?.start_time}
+                            bookingCode={success.booking_code}
+                            ticketCode={tk.ticket_code}
+                            seats={bs ? [bs] : []}
+                            amount={Number(success.total_amount || 0) / (success.tickets.length || 1)}
+                            currency={displayCurrency}
+                          />
+                        </div>
+                        <button
+                          className="inline-flex items-center gap-2 border-none cursor-pointer py-2.5 px-5 text-sm font-[700] rounded-xl transition-all duration-200 bg-[rgba(229,9,20,0.12)] text-[#e50914] hover:bg-[rgba(229,9,20,0.2)]"
+                          onClick={() => downloadPdf(ticketRefs.current[tk.id], `${tk.ticket_code || "ticket"}.pdf`)}
+                        >
+                          <Download size={16} /> Download PDF
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
 
             <div className="flex gap-3 mt-6 justify-center col-span-full max-md:col-span-1">
               <button className="bg-transparent text-[var(--app-ink2)] border border-[var(--app-edge2)] cursor-pointer px-[22px] py-3 text-sm font-[700] rounded-xl transition-all duration-200 hover:bg-[var(--app-fill)] hover:border-[var(--app-edge2)]" onClick={() => navigate("/")}>Back to Home</button>
@@ -611,7 +971,6 @@ export default function Booking() {
                   setSuccess(null);
                   setSelectedSeats([]);
                   setPaymentStatus("pending");
-                  setExpired(false);
                   setStep(0);
                 }}
               >
@@ -622,60 +981,19 @@ export default function Booking() {
         )}
       </main>
 
-      {step >= 0 && step <= 2 && (
-        <div className="sticky bottom-0 z-[90] bg-[var(--app-bar)] backdrop-blur-[12px] border-t border-[var(--app-edge)] px-6 py-3.5 flex items-center justify-between gap-4">
-          <div className="flex flex-col min-w-0 flex-1">
-            <span className="text-[10px] uppercase tracking-[2px] text-[var(--app-mute)] font-[700]">
-              Step {step + 1} of 3 · {steps[step]}
-            </span>
-            {step === 0 ? (
-              <span className="text-sm font-[800] truncate">
-                {selectedShowtime
-                  ? `${selectedShowtime.room?.name || "Room"} · ${new Date(selectedShowtime.start_time).toLocaleDateString()} ${new Date(selectedShowtime.start_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
-                  : "Pick a showtime to continue"}
-              </span>
-            ) : (
-              <span className="text-sm font-[800] truncate">
-                {selectedSeats.length} ticket{selectedSeats.length !== 1 ? "s" : ""} · {movieName}
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0">
-            {step === 2 && booking ? (
-              <>
-                <span className="text-[19px] font-[800] text-[#e50914]">{renderPrice(payment?.amount || totalAmount)}</span>
-                <button
-                  className="bg-[rgba(229,9,20,0.12)] text-[#e50914] border border-[rgba(229,9,20,0.35)] cursor-pointer px-[22px] py-3 text-sm font-[700] rounded-xl transition-all duration-200 hover:bg-[rgba(229,9,20,0.2)]"
-                  onClick={checkPayment}
-                >
-                  Check Payment
-                </button>
-              </>
-            ) : (
-              <>
-                {step > 0 && (
-                  <button
-                    className="bg-transparent text-[var(--app-ink2)] border border-[var(--app-edge2)] cursor-pointer px-[18px] py-3 text-sm font-[700] rounded-xl transition-all duration-200 hover:bg-[var(--app-fill)] hover:border-[var(--app-edge2)]"
-                    onClick={() => setStep(step - 1)}
-                  >
-                    ← Back
-                  </button>
-                )}
-                <span className="text-[19px] font-[800] text-[#e50914] hidden sm:block">
-                  {step === 0 ? (selectedShowtime ? renderPrice(selectedShowtime.price) : "$0.00") : renderPrice(totalAmount)}
-                </span>
-                <button
-                  className="bg-[#e50914] text-white shadow-[0_4px_14px_rgba(229,9,20,0.35)] border-none cursor-pointer px-[22px] py-3 text-sm font-[700] rounded-xl transition-all duration-200 hover:bg-[#f40612] hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:translate-y-0"
-                  disabled={step === 0 ? !selectedShowtimeId : step === 1 ? selectedSeats.length === 0 : creating}
-                  onClick={step === 0 ? () => setStep(1) : step === 1 ? () => setStep(2) : startPayment}
-                >
-                  {step === 0 ? "Select Seats →" : step === 1 ? "Continue to Pay →" : creating ? "Creating..." : `Confirm & Pay · ${renderPrice(totalAmount)}`}
-                </button>
-              </>
-            )}
-          </div>
-        </div>
+      {showPaymentModal && payment && (
+        <PaymentModal
+          open={showPaymentModal}
+          payment={payment}
+          status={paymentStatus}
+          error={paymentError}
+          checking={checking}
+          refreshing={refreshing}
+          bookingCode={booking?.booking_code}
+          onCheck={checkPayment}
+          onRefresh={refreshPayment}
+          onClose={() => setShowPaymentModal(false)}
+        />
       )}
     </div>
   );

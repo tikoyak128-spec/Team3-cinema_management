@@ -15,6 +15,8 @@ import {
   Loader2,
   Eye,
   EyeOff,
+  Star,
+  Clapperboard,
 } from "lucide-react";
 
 const inputClass =
@@ -70,6 +72,28 @@ export default function Profile({ embedded = false }) {
 
   const [activeTab, setActiveTab] = useState("profile");
   const [loadingMe, setLoadingMe] = useState(true);
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+
+  useEffect(() => {
+    if (activeTab !== "reviews") return;
+    let cancelled = false;
+    const load = async () => {
+      setReviewsLoading(true);
+      try {
+        const { data } = await api.get("/reviews/mine");
+        if (!cancelled) setReviews(Array.isArray(data) ? data : []);
+      } catch {
+        if (!cancelled) setReviews([]);
+      } finally {
+        if (!cancelled) setReviewsLoading(false);
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -193,7 +217,7 @@ export default function Profile({ embedded = false }) {
       {/* Header Card */}
       <div className="relative overflow-hidden rounded-2xl border border-[var(--app-edge)] bg-[linear-gradient(135deg,var(--app-panel),var(--app-panel2))] p-6 sm:p-8 mb-6">
         <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-[rgba(229,9,20,0.15)] blur-[70px]" />
-        <div className="absolute -bottom-24 -left-16 w-64 h-64 rounded-full bg-[rgba(139,92,246,0.08)] blur-[70px]" />
+        <div className="absolute -bottom-24 -left-16 w-64 h-64 rounded-full bg-[rgba(237,195,143,0.08)] blur-[70px]" />
         <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-start gap-5">
           {/* Avatar */}
           <div className="relative shrink-0">
@@ -273,11 +297,80 @@ export default function Profile({ embedded = false }) {
         >
           {t("profile.tabSecurity")}
         </button>
+        <button
+          className={`text-[13px] font-bold px-5 py-2.5 rounded-full transition-all cursor-pointer ${activeTab === "reviews" ? "bg-brand text-white" : "text-[var(--app-mute)] hover:text-[var(--app-ink)]"}`}
+          onClick={() => setActiveTab("reviews")}
+        >
+          {t("profile.tabReviews")}
+        </button>
       </div>
 
       {loadingMe ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 size={26} className="text-brand animate-spin" />
+        </div>
+      ) : activeTab === "reviews" ? (
+        <div>
+          <div className="mb-5">
+            <h2 className="text-lg sm:text-xl font-extrabold">{t("profile.tabReviews")}</h2>
+            <p className="text-xs text-[var(--app-mute)] mt-1">{t("profile.myReviewsDesc")}</p>
+          </div>
+          {reviewsLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 size={26} className="text-brand animate-spin" />
+            </div>
+          ) : reviews.length === 0 ? (
+            <div className="bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-2xl py-16 px-5 text-center text-[var(--app-mute)]">
+              {t("profile.noReviews")}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {reviews.map((r) => (
+                <div
+                  key={r.id}
+                  className="bg-[linear-gradient(135deg,var(--app-panel),var(--app-panel2))] border border-[var(--app-edge)] rounded-2xl p-5 flex gap-4"
+                >
+                  <button
+                    onClick={() => r.movie && navigate(`/movies/${encodeURIComponent(r.movie.title)}`)}
+                    className="w-16 h-24 rounded-lg overflow-hidden bg-[var(--app-fill)] shrink-0 cursor-pointer"
+                  >
+                    {r.movie?.poster ? (
+                      <img src={r.movie.poster} alt={r.movie?.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-[var(--app-mute)]">
+                        <Clapperboard size={20} />
+                      </div>
+                    )}
+                  </button>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <button
+                        onClick={() => r.movie && navigate(`/movies/${encodeURIComponent(r.movie.title)}`)}
+                        className="font-bold text-[15px] text-[var(--app-ink)] hover:text-brand transition-colors cursor-pointer text-left"
+                      >
+                        {r.movie?.title || "N/A"}
+                      </button>
+                      <div className="flex items-center gap-0.5">
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <Star
+                            key={n}
+                            size={14}
+                            className={n <= r.rating ? "text-[#eab308] fill-[#eab308]" : "text-[var(--app-mute)]"}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    {r.comment && (
+                      <p className="text-[13px] text-[var(--app-ink2)] leading-relaxed mt-2">{r.comment}</p>
+                    )}
+                    <p className="text-[12px] text-[var(--app-mute)] mt-2">
+                      {t("profile.reviewedOn")} {new Date(r.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">

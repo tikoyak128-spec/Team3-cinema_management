@@ -7,36 +7,69 @@ use Illuminate\Support\Facades\DB;
 
 class SeatSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        $rows = ['A', 'B', 'C', 'D', 'E'];
+        $rooms = DB::table('cinema_rooms')->get();
 
-        $roomNames = ['Room 1', 'Room 2', 'Room 3'];
+        foreach ($rooms as $room) {
+            $totalSeats = (int) $room->total_seats;
 
-        foreach ($roomNames as $roomName) {
-            $roomId = DB::table('rooms')->where('name', $roomName)->value('id');
+            if ($totalSeats <= 0) {
+                continue;
+            }
 
-            foreach ($rows as $row) {
-                for ($col = 1; $col <= 4; $col++) {
-                    $seatNumber = $row . $col;
+            $existingSeatIds = DB::table('seats')->where('cinema_room_id', $room->id)->pluck('id');
+
+            // Never destroy historical booking/ticket data: if any seat in this
+            // room is referenced by a booking, leave the room untouched.
+            $inUse = DB::table('booking_seats')
+                ->whereIn('seat_id', $existingSeatIds)
+                ->whereHas('booking', function ($q) {
+                    $q->whereIn('status', ['pending', 'confirmed']);
+                })
+                ->exists();
+
+            if ($inUse) {
+                continue;
+            }
+
+            DB::table('booking_seats')->whereIn('seat_id', $existingSeatIds)->delete();
+
+            DB::table('seats')->where('cinema_room_id', $room->id)->delete();
+
+            $cols = $totalSeats >= 90 ? 10 : 8;
+            $fullRows = intdiv($totalSeats, $cols);
+            $lastRowCols = $totalSeats % $cols;
+            $rows = $lastRowCols > 0 ? $fullRows + 1 : $fullRows;
+
+            $seatNumber = 0;
+
+            for ($i = 0; $i < $rows; $i++) {
+                $rowLetter = $this->rowLetter($i);
+                $rowCols = $i === $rows - 1 && $lastRowCols > 0 ? $lastRowCols : $cols;
+                $isLastRow = $i === $rows - 1;
+
+                for ($col = 1; $col <= $rowCols; $col++) {
+                    $seatNumber++;
                     $seatType = 'regular';
 
-                    if ($row === 'D' || $row === 'E') {
-                        $seatType = 'vip';
-                    }
-                    if ($row === 'E' && ($col === 3 || $col === 4)) {
+                    if ($isLastRow && $col <= 2) {
                         $seatType = 'couple';
+                    } elseif ($isLastRow || ($rows > 3 && $i >= $rows - 2)) {
+                        $seatType = 'vip';
                     }
 
                     DB::table('seats')->updateOrInsert(
-                        ['room_id' => $roomId, 'seat_number' => $seatNumber],
-                        ['seat_type' => $seatType, 'created_at' => now(), 'updated_at' => now()]
+                        ['cinema_room_id' => $room->id, 'seat_number' => $rowLetter . $col],
+                        ['row' => $rowLetter, 'seat_type' => $seatType, 'created_at' => now(), 'updated_at' => now()]
                     );
                 }
             }
         }
+    }
+
+    private function rowLetter(int $index): string
+    {
+        return chr(65 + $index);
     }
 }

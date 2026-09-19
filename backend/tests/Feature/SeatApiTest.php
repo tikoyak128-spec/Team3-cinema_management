@@ -19,14 +19,14 @@ class SeatApiTest extends TestCase
         return Room::create([
             'cinema_id' => $cinema->id,
             'name' => 'Room 1',
-            'total_seats' => 2,
+            'capacity' => 2,
         ]);
     }
 
     public function test_index_lists_seats_with_room(): void
     {
         $room = $this->createRoom();
-        Seat::create(['room_id' => $room->id, 'seat_number' => 'A1', 'seat_type' => 'regular']);
+        Seat::create(['cinema_room_id' => $room->id, 'seat_number' => 'A1', 'seat_type' => 'regular']);
 
         $this->getJson('/api/seats')
             ->assertOk()
@@ -38,7 +38,7 @@ class SeatApiTest extends TestCase
         $room = $this->createRoom();
 
         $this->postJson('/api/seats', [
-            'room_id' => $room->id,
+            'cinema_room_id' => $room->id,
             'seat_number' => 'A1',
             'seat_type' => 'vip',
         ])->assertStatus(201)
@@ -50,7 +50,7 @@ class SeatApiTest extends TestCase
         $room = $this->createRoom();
 
         $this->postJson('/api/seats', [
-            'room_id' => $room->id,
+            'cinema_room_id' => $room->id,
             'seat_number' => 'A1',
             'seat_type' => 'luxury',
         ])->assertStatus(422);
@@ -59,7 +59,7 @@ class SeatApiTest extends TestCase
     public function test_show_returns_single_seat(): void
     {
         $room = $this->createRoom();
-        $seat = Seat::create(['room_id' => $room->id, 'seat_number' => 'A1', 'seat_type' => 'regular']);
+        $seat = Seat::create(['cinema_room_id' => $room->id, 'seat_number' => 'A1', 'seat_type' => 'regular']);
 
         $this->getJson("/api/seats/{$seat->id}")
             ->assertOk()
@@ -70,7 +70,7 @@ class SeatApiTest extends TestCase
     public function test_update_works(): void
     {
         $room = $this->createRoom();
-        $seat = Seat::create(['room_id' => $room->id, 'seat_number' => 'A1', 'seat_type' => 'regular']);
+        $seat = Seat::create(['cinema_room_id' => $room->id, 'seat_number' => 'A1', 'seat_type' => 'regular']);
 
         $this->putJson("/api/seats/{$seat->id}", ['seat_type' => 'couple'])
             ->assertOk()
@@ -80,7 +80,7 @@ class SeatApiTest extends TestCase
     public function test_destroy_deletes_seat(): void
     {
         $room = $this->createRoom();
-        $seat = Seat::create(['room_id' => $room->id, 'seat_number' => 'A1', 'seat_type' => 'regular']);
+        $seat = Seat::create(['cinema_room_id' => $room->id, 'seat_number' => 'A1', 'seat_type' => 'regular']);
 
         $this->deleteJson("/api/seats/{$seat->id}")
             ->assertOk();

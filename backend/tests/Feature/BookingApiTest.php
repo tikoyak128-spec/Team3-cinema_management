@@ -30,27 +30,27 @@ class BookingApiTest extends TestCase
         $category = Category::create(['name' => 'Action']);
         $cinema = Cinema::create(['name' => 'Cine 1', 'location' => 'Downtown']);
         $movie = Movie::create([
-            'category_id' => $category->id,
+            'movie_category_id' => $category->id,
             'title' => 'Avengers',
             'description' => 'desc',
             'duration' => 120,
             'release_date' => '2026-01-01',
-            'poster_url' => 'https://example.com/p.jpg',
+            'poster' => 'https://example.com/p.jpg',
             'trailer_url' => 'https://example.com/t.mp4',
         ]);
         $room = Room::create([
             'cinema_id' => $cinema->id,
             'name' => 'Room 1',
-            'total_seats' => 3,
+            'capacity' => 3,
         ]);
         $seats = collect(range(1, 3))->map(fn ($n) => Seat::create([
-            'room_id' => $room->id,
+            'cinema_room_id' => $room->id,
             'seat_number' => "A$n",
             'seat_type' => 'regular',
         ]));
         $showtime = Showtime::create([
             'movie_id' => $movie->id,
-            'room_id' => $room->id,
+            'cinema_room_id' => $room->id,
             'start_time' => '2026-09-05 19:00:00',
             'end_time' => '2026-09-05 21:00:00',
             'price' => 5,
@@ -106,8 +106,8 @@ class BookingApiTest extends TestCase
     {
         $world = $this->seedWorld();
         $cinema2 = Cinema::create(['name' => 'Cine 2', 'location' => 'Mall']);
-        $room2 = Room::create(['cinema_id' => $cinema2->id, 'name' => 'Room X', 'total_seats' => 1]);
-        $foreignSeat = Seat::create(['room_id' => $room2->id, 'seat_number' => 'Z1', 'seat_type' => 'regular']);
+        $room2 = Room::create(['cinema_id' => $cinema2->id, 'name' => 'Room X', 'capacity' => 1]);
+        $foreignSeat = Seat::create(['cinema_room_id' => $room2->id, 'seat_number' => 'Z1', 'seat_type' => 'regular']);
 
         $response = $this->postJson('/api/bookings', [
             'user_id' => $world['user']->id,

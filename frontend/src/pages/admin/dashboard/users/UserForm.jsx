@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../../../api/client";
+import Select from "../../../../components/Select";
 import { usePrefs } from "../../../../context/PrefsContext";
+import { X } from "lucide-react";
 
 export default function UserForm({ isEdit = false }) {
   const navigate = useNavigate();
@@ -104,11 +106,11 @@ export default function UserForm({ isEdit = false }) {
 
           <div className="flex flex-col gap-[7px]">
             <label className="text-[13px] font-bold text-[var(--app-ink2)]">{t("users.role")} <span className="text-[#e50914]">*</span></label>
-            <select className="bg-[var(--app-panel2)] border border-[var(--app-edge)] rounded-xl py-3 px-3.5 text-[var(--app-ink)] font-inherit text-[14px] outline-none transition-colors duration-200 focus:border-[#e50914] cursor-pointer appearance-none" value={form.role} onChange={set("role")}>
+            <Select className="bg-[var(--app-panel2)] border border-[var(--app-edge)] rounded-xl py-3 px-3.5 text-[var(--app-ink)] font-inherit text-[14px] outline-none transition-colors duration-200 focus:border-[#e50914] cursor-pointer appearance-none" value={form.role} onChange={set("role")}>
               <option value="admin">{t("users.admins")}</option>
               <option value="staff">{t("users.staff")}</option>
               <option value="customer">{t("users.customers")}</option>
-            </select>
+            </Select>
             <p className="text-[12px] text-[var(--app-mute)]">{t("users.roleHint")}</p>
           </div>
 
@@ -128,7 +130,7 @@ export default function UserForm({ isEdit = false }) {
             <button type="submit" className="inline-flex items-center gap-2 border-none cursor-pointer font-inherit py-[11px] px-5 text-[14px] font-bold rounded-xl transition-all duration-200 bg-[#e50914] text-white shadow-[0_4px_14px_rgba(229,9,20,0.35)] hover:bg-[#f40612] hover:-translate-y-px" disabled={submitting}>
               {submitting ? t("users.saving") : isEdit ? t("users.saveChanges") : t("users.createUser")}
             </button>
-            <button type="button" className="inline-flex items-center gap-2 border-none cursor-pointer font-inherit py-[11px] px-5 text-[14px] font-bold rounded-xl transition-all duration-200 bg-transparent text-[var(--app-ink2)] border border-[var(--app-edge2)] hover:bg-[var(--app-fill)] hover:border-[var(--app-edge2)]" onClick={() => navigate("/admin/users")}>{t("common.cancel")}</button>
+            <button type="button" className="inline-flex items-center gap-2 border cursor-pointer font-inherit py-[11px] px-5 text-[14px] font-bold rounded-xl transition-all duration-200 bg-[var(--app-panel2)] text-[var(--app-ink2)] border-[var(--app-edge2)] hover:bg-[rgba(229,9,20,0.08)] hover:text-brand hover:border-[rgba(229,9,20,0.35)]" onClick={() => navigate("/admin/users")}><X size={16} /> {t("common.cancel")}</button>
           </div>
         </div>
       </form>

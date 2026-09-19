@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api, { buildFormData } from "../../../../api/client";
+import Select from "../../../../components/Select";
 import { usePrefs } from "../../../../context/PrefsContext";
+import { X } from "lucide-react";
 
 export default function MovieEdit() {
   const navigate = useNavigate();
@@ -115,10 +117,10 @@ export default function MovieEdit() {
 
           <div className="flex flex-col gap-[7px]">
             <label className="text-[13px] font-bold text-[var(--app-ink2)]">{t("adminMovieForm.category")} <span className="text-[#e50914]">*</span></label>
-            <select className="bg-[var(--app-panel2)] border border-[var(--app-edge)] rounded-xl py-3 px-3.5 text-[var(--app-ink)] font-inherit text-[14px] outline-none transition-colors duration-200 focus:border-[#e50914] cursor-pointer appearance-none" value={form.movie_category_id} onChange={set("movie_category_id")} required>
+            <Select className="bg-[var(--app-panel2)] border border-[var(--app-edge)] rounded-xl py-3 px-3.5 text-[var(--app-ink)] font-inherit text-[14px] outline-none transition-colors duration-200 focus:border-[#e50914] cursor-pointer appearance-none" value={form.movie_category_id} onChange={set("movie_category_id")} required>
               <option value="">{t("adminMovieForm.selectCategory")}</option>
               {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            </Select>
           </div>
 
           <div className="flex flex-col gap-[7px]">
@@ -190,7 +192,7 @@ export default function MovieEdit() {
             <button type="submit" className="inline-flex items-center gap-2 border-none cursor-pointer font-inherit py-[11px] px-5 text-[14px] font-bold rounded-xl transition-all duration-200 bg-[#e50914] text-white shadow-[0_4px_14px_rgba(229,9,20,0.35)] hover:bg-[#f40612] hover:-translate-y-px" disabled={submitting}>
               {submitting ? t("common.saving") : t("common.save")}
             </button>
-            <button type="button" className="inline-flex items-center gap-2 border-none cursor-pointer font-inherit py-[11px] px-5 text-[14px] font-bold rounded-xl transition-all duration-200 bg-transparent text-[var(--app-ink2)] border border-[var(--app-edge2)] hover:bg-[var(--app-fill)] hover:border-[var(--app-edge2)]" onClick={() => navigate("/admin/movies")}>{t("common.cancel")}</button>
+            <button type="button" className="inline-flex items-center gap-2 border cursor-pointer font-inherit py-[11px] px-5 text-[14px] font-bold rounded-xl transition-all duration-200 bg-[var(--app-panel2)] text-[var(--app-ink2)] border-[var(--app-edge2)] hover:bg-[rgba(229,9,20,0.08)] hover:text-brand hover:border-[rgba(229,9,20,0.35)]" onClick={() => navigate("/admin/movies")}><X size={16} /> {t("common.cancel")}</button>
           </div>
         </div>
       </form>

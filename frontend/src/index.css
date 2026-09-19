@@ -1,27 +1,29 @@
-@import url("https://fonts.googleapis.com/css2?family=Kantumruy+Pro:ital,wght@0,100..700;1,100..700&family=Inter:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Kantumruy+Pro:ital,wght@0,100..700;1,100..700&family=Mulish:wght@400;500;600;700;800;900&display=swap");
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-brand: #e50914;
-  --color-brand-hover: #f40612;
-  --color-dark: #050505;
-  --color-dark-card: #111111;
-  --color-dark-border: #1f1f1f;
-  --color-muted: #a0a0a0;
+  --color-brand: #c32127;
+  --color-brand-hover: #a1161c;
+  --color-dark: #121212;
+  --color-dark-card: #1b1b1b;
+  --color-dark-border: #2a2a2a;
+  --color-muted: #9d9d9d;
+  --font-sans: "Mulish", "Kantumruy Pro", system-ui, -apple-system, "Segoe UI", Roboto, "Khmer OS", sans-serif;
 }
 
 html {
-  font-family: "Inter", "Kantumruy Pro", system-ui, -apple-system, "Segoe UI", Roboto, "Khmer OS", sans-serif;
+  font-family: "Mulish", "Kantumruy Pro", system-ui, -apple-system, "Segoe UI", Roboto, "Khmer OS", sans-serif;
 }
 
 body {
-  font-family: "Inter", "Kantumruy Pro", system-ui, -apple-system, "Segoe UI", Roboto, "Khmer OS", sans-serif;
+  font-family: "Mulish", "Kantumruy Pro", system-ui, -apple-system, "Segoe UI", Roboto, "Khmer OS", sans-serif;
 }
 
 :root {
   --app-page: #f4f5f7;
+  --app-glow: #fdf3f4;
   --app-deep: #eceef2;
   --app-panel: #ffffff;
   --app-panel2: #f1f3f6;
@@ -37,25 +39,34 @@ body {
 }
 
 .dark {
-  --app-page: #050505;
-  --app-deep: #0a0a0a;
-  --app-panel: #111111;
-  --app-panel2: #161616;
-  --app-edge: #1f1f1f;
-  --app-edge2: #2a2a2a;
-  --app-ink: #ffffff;
-  --app-ink2: #e0e0e0;
-  --app-mute: #a0a0a0;
+  --app-page: #0f1015;
+  --app-glow: #6a1a1d;
+  --app-deep: #0a0b0e;
+  --app-panel: #17181d;
+  --app-panel2: #1e2026;
+  --app-edge: #26282f;
+  --app-edge2: #363942;
+  --app-ink: #f5f5f5;
+  --app-ink2: #cfcfcf;
+  --app-mute: #9d9d9d;
   --app-fill: rgba(255, 255, 255, 0.06);
   --app-fill2: rgba(255, 255, 255, 0.11);
-  --app-bar: rgba(11, 11, 11, 0.95);
-  --app-header: rgba(5, 5, 5, 0.85);
+  --app-bar: rgba(15, 16, 21, 0.95);
+  --app-header: rgba(15, 16, 21, 0.85);
 }
 
 @layer base {
   @keyframes heroZoom {
     0% { transform: scale(1); }
     100% { transform: scale(1.08); }
+  }
+
+  @keyframes redFlow {
+    0% { background-position: 0% 0%; }
+    25% { background-position: 60% 30%; }
+    50% { background-position: 100% 60%; }
+    75% { background-position: 40% 80%; }
+    100% { background-position: 0% 100%; }
   }
 
   @keyframes slideIn {
@@ -104,6 +115,52 @@ body {
     background-color: var(--app-page);
     color: var(--app-ink);
     color-scheme: light;
+  }
+
+  body {
+    position: relative;
+  }
+
+  #root {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Dark mode ambient background — clean, modern */
+  html.dark body::before,
+  html.dark body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    display: block;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  /* Dark mode ambient background — flowing red light like Khmer Cinema */
+  html.dark body::before,
+  html.dark body::after {
+    content: "";
+    position: fixed;
+    inset: -15%;
+    display: block;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  html.dark body::before {
+    background:
+      radial-gradient(640px 640px at 18% 28%, rgba(195, 33, 39, 0.5), transparent 62%),
+      radial-gradient(760px 760px at 78% 18%, rgba(195, 33, 39, 0.42), transparent 62%),
+      radial-gradient(560px 560px at 55% 88%, rgba(195, 33, 39, 0.34), transparent 62%),
+      radial-gradient(1000px 800px at 50% 52%, rgba(160, 20, 30, 0.24), transparent 68%);
+    background-size: 240% 240%;
+    filter: blur(10px);
+    animation: redFlow 20s ease-in-out infinite alternate;
+  }
+
+  html.dark body::after {
+    background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.42) 100%);
   }
 
   .dark {

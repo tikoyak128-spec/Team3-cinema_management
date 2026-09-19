@@ -9,11 +9,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            if (!Schema::hasColumn('users', 'otp_code')) {
-                $table->string('otp_code', 6)->nullable()->after('phone');
+            if (! Schema::hasColumn('users', 'otp')) {
+                $table->string('otp', 6)->nullable()->after('phone');
             }
-            if (!Schema::hasColumn('users', 'otp_expires_at')) {
-                $table->timestamp('otp_expires_at')->nullable()->after('otp_code');
+            if (! Schema::hasColumn('users', 'otp_verified')) {
+                $table->boolean('otp_verified')->default(false)->after('otp');
+            }
+            if (! Schema::hasColumn('users', 'otp_expires_at')) {
+                $table->timestamp('otp_expires_at')->nullable()->after('otp_verified');
             }
         });
     }
@@ -21,7 +24,11 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn(['otp_code', 'otp_expires_at']);
+            foreach (['otp', 'otp_verified', 'otp_expires_at'] as $column) {
+                if (Schema::hasColumn('users', $column)) {
+                    $table->dropColumn($column);
+                }
+            }
         });
     }
 };

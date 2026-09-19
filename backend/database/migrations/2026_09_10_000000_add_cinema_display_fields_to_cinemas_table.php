@@ -9,12 +9,22 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('cinemas', function (Blueprint $table) {
-            $table->string('area')->nullable()->after('location');
-            $table->string('hours')->nullable()->after('phone');
-            $table->string('tagline')->nullable()->after('image');
-            $table->json('features')->nullable()->after('tagline');
-        });
+        if (Schema::hasTable('cinemas')) {
+            Schema::table('cinemas', function (Blueprint $table) {
+                if (! Schema::hasColumn('cinemas', 'area')) {
+                    $table->string('area')->nullable()->after('location');
+                }
+                if (! Schema::hasColumn('cinemas', 'hours')) {
+                    $table->string('hours')->nullable()->after('phone');
+                }
+                if (! Schema::hasColumn('cinemas', 'tagline')) {
+                    $table->string('tagline')->nullable()->after('image');
+                }
+                if (! Schema::hasColumn('cinemas', 'features')) {
+                    $table->json('features')->nullable()->after('tagline');
+                }
+            });
+        }
 
         $imagePool = [
             'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=900&h=600&fit=crop',
@@ -78,8 +88,14 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('cinemas', function (Blueprint $table) {
-            $table->dropColumn(['area', 'hours', 'tagline', 'features']);
-        });
+        if (Schema::hasTable('cinemas')) {
+            Schema::table('cinemas', function (Blueprint $table) {
+                foreach (['area', 'hours', 'tagline', 'features'] as $column) {
+                    if (Schema::hasColumn('cinemas', $column)) {
+                        $table->dropColumn($column);
+                    }
+                }
+            });
+        }
     }
 };

@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../../../api/client";
+import Select from "../../../../components/Select";
 import { usePrefs } from "../../../../context/PrefsContext";
+import { X } from "lucide-react";
 
 export default function ShowtimeForm({ isEdit = false }) {
   const navigate = useNavigate();
@@ -79,17 +81,17 @@ export default function ShowtimeForm({ isEdit = false }) {
         <div className="grid grid-cols-2 gap-[18px] max-sm:grid-cols-1">
           <div className="flex flex-col gap-[7px] col-span-full max-sm:col-span-1">
             <label className="text-[13px] font-bold text-[var(--app-ink2)]">{t("adminShowtimeForm.movie")} <span className="text-[#e50914]">*</span></label>
-            <select className="bg-[var(--app-panel2)] border border-[var(--app-edge)] rounded-xl py-3 px-3.5 text-[var(--app-ink)] font-inherit text-[14px] outline-none transition-colors duration-200 focus:border-[#e50914] cursor-pointer appearance-none" value={form.movie_id} onChange={set("movie_id")} required>
+            <Select className="bg-[var(--app-panel2)] border border-[var(--app-edge)] rounded-xl py-3 px-3.5 text-[var(--app-ink)] font-inherit text-[14px] outline-none transition-colors duration-200 focus:border-[#e50914] cursor-pointer appearance-none" value={form.movie_id} onChange={set("movie_id")} required>
               <option value="">{t("adminShowtimeForm.selectMovie")}</option>
               {movies.map((m) => <option key={m.id} value={m.id}>{m.title}</option>)}
-            </select>
+            </Select>
           </div>
           <div className="flex flex-col gap-[7px]">
             <label className="text-[13px] font-bold text-[var(--app-ink2)]">{t("adminShowtimeForm.room")} <span className="text-[#e50914]">*</span></label>
-            <select className="bg-[var(--app-panel2)] border border-[var(--app-edge)] rounded-xl py-3 px-3.5 text-[var(--app-ink)] font-inherit text-[14px] outline-none transition-colors duration-200 focus:border-[#e50914] cursor-pointer appearance-none" value={form.cinema_room_id} onChange={set("cinema_room_id")} required>
+            <Select className="bg-[var(--app-panel2)] border border-[var(--app-edge)] rounded-xl py-3 px-3.5 text-[var(--app-ink)] font-inherit text-[14px] outline-none transition-colors duration-200 focus:border-[#e50914] cursor-pointer appearance-none" value={form.cinema_room_id} onChange={set("cinema_room_id")} required>
               <option value="">{t("adminShowtimeForm.selectRoom")}</option>
               {rooms.map((r) => <option key={r.id} value={r.id}>{r.name} ({r.cinema?.name})</option>)}
-            </select>
+            </Select>
           </div>
           <div className="flex flex-col gap-[7px]">
             <label className="text-[13px] font-bold text-[var(--app-ink2)]">{t("adminShowtimeForm.startTime")} <span className="text-[#e50914]">*</span></label>
@@ -107,7 +109,7 @@ export default function ShowtimeForm({ isEdit = false }) {
             <button type="submit" className="inline-flex items-center gap-2 border-none cursor-pointer font-inherit py-[11px] px-5 text-[14px] font-bold rounded-xl transition-all duration-200 bg-[#e50914] text-white shadow-[0_4px_14px_rgba(229,9,20,0.35)] hover:bg-[#f40612] hover:-translate-y-px" disabled={submitting}>
               {submitting ? t("common.saving") : isEdit ? t("common.save") : t("admin.addShowtime")}
             </button>
-            <button type="button" className="inline-flex items-center gap-2 border-none cursor-pointer font-inherit py-[11px] px-5 text-[14px] font-bold rounded-xl transition-all duration-200 bg-transparent text-[var(--app-ink2)] border border-[var(--app-edge2)] hover:bg-[var(--app-fill)]" onClick={() => navigate("/admin/showtimes")}>{t("common.cancel")}</button>
+            <button type="button" className="inline-flex items-center gap-2 border cursor-pointer font-inherit py-[11px] px-5 text-[14px] font-bold rounded-xl transition-all duration-200 bg-[var(--app-panel2)] text-[var(--app-ink2)] border-[var(--app-edge2)] hover:bg-[rgba(229,9,20,0.08)] hover:text-brand hover:border-[rgba(229,9,20,0.35)]" onClick={() => navigate("/admin/showtimes")}><X size={16} /> {t("common.cancel")}</button>
           </div>
         </div>
       </form>
