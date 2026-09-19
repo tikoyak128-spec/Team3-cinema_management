@@ -4,7 +4,6 @@ import HeroBanner from "../components/HeroBanner";
 import Select from "../components/Select";
 import { usePrefs } from "../context/PrefsContext";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { nowShowing as fallbackNow, comingSoon as fallbackSoon } from "../data/cinemaData";
 import { normalizeMovie, nowShowingOf, comingSoonOf } from "../utils/movieFormat";
 import api from "../api/client";
 import useHeroImage from "../hooks/useHeroImage";
@@ -50,11 +49,9 @@ export default function NowShowing({ initialTab = "now" }) {
   const list = useMemo(() => {
     const all = movies ?? [];
     if (tab === "now") {
-      const shown = nowShowingOf(all);
-      return shown.length > 0 ? shown : fallbackNow;
+      return nowShowingOf(all);
     }
-    const soon = comingSoonOf(all);
-    return soon.length > 0 ? soon : fallbackSoon;
+    return comingSoonOf(all);
   }, [movies, tab]);
 
   const filtered = useMemo(() => {

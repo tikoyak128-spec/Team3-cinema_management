@@ -4,7 +4,7 @@ import { usePrefs } from "../context/PrefsContext";
 import MovieCard from "../components/MovieCard";
 import CinemaCard from "../components/CinemaCard";
 import CustomerFeedback from "../components/CustomerFeedback";
-import { nowShowing, comingSoon, cinemas as fallbackCinemas } from "../data/cinemaData";
+import { cinemas as fallbackCinemas } from "../data/cinemaData";
 import { normalizeCinema, defaultCinemaImage } from "../utils/cinemaFormat";
 import { normalizeMovie, nowShowingOf, comingSoonOf } from "../utils/movieFormat";
 import api from "../api/client";
@@ -71,15 +71,8 @@ export default function Home() {
 
   const nowList = nowShowingOf(dbMovies);
   const soonList = comingSoonOf(dbMovies);
-  const movieList =
-    activeTab === "now-showing"
-      ? nowList.length > 0
-        ? nowList
-        : nowShowing
-      : soonList.length > 0
-        ? soonList
-        : comingSoon;
-  const heroMovies = nowList.length > 0 ? nowList : nowShowing;
+  const movieList = activeTab === "now-showing" ? nowList : soonList;
+  const heroMovies = nowList.length > 0 ? nowList : soonList;
 
   const goToNext = useCallback(() => {
     setCurrentSlide((prev) => (prev + 1) % totalSlides);
@@ -92,6 +85,7 @@ export default function Home() {
 
   // Hero slideshow auto-advance
   useEffect(() => {
+    if (heroMovies.length === 0) return;
     const heroTimer = setInterval(() => {
       setHeroFading(true);
       setTimeout(() => {
@@ -116,6 +110,7 @@ export default function Home() {
   return (
     <>
       {/* ===== HERO BANNER - MOVIE SLIDESHOW ===== */}
+      {heroMovies.length > 0 && (
       <section className="relative min-h-[85vh] sm:min-h-[88vh] md:min-h-[90vh] lg:min-h-screen flex items-center overflow-hidden bg-[var(--app-page)]">
         {/* Slideshow Backgrounds */}
         {heroMovies.map((movie, idx) => (
@@ -198,6 +193,7 @@ export default function Home() {
           ))}
         </div>
       </section>
+      )}
 
       <section className="max-w-[1024px] mx-auto px-5 sm:px-6 lg:px-8 py-14 sm:py-16 md:py-20 scroll-mt-20" id="about">
         <div className="grid grid-cols-1 md:grid-cols-[1.2fr_1fr] gap-8 sm:gap-10 lg:gap-16 items-center">

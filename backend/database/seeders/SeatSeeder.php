@@ -23,10 +23,9 @@ class SeatSeeder extends Seeder
             // Never destroy historical booking/ticket data: if any seat in this
             // room is referenced by a booking, leave the room untouched.
             $inUse = DB::table('booking_seats')
-                ->whereIn('seat_id', $existingSeatIds)
-                ->whereHas('booking', function ($q) {
-                    $q->whereIn('status', ['pending', 'confirmed']);
-                })
+                ->join('bookings', 'bookings.id', '=', 'booking_seats.booking_id')
+                ->whereIn('booking_seats.seat_id', $existingSeatIds)
+                ->whereIn('bookings.status', ['pending', 'confirmed'])
                 ->exists();
 
             if ($inUse) {
