@@ -5,7 +5,7 @@ import { usePrefs } from "../context/PrefsContext";
 import api from "../api/client";
 import { formatDuration, normalizeMovie } from "../utils/movieFormat";
 
-const FALLBACK_POSTER = "https://via.placeholder.com/300x450";
+const FALLBACK_POSTER = "https://placehold.co/300x450/050505/e50914/png?text=Khmer+Cinema";
 
 const normalize = (s) =>
   (s || "").toLowerCase().replace(/'/g, "").replace(/[^a-z0-9]+/g, " ").trim();

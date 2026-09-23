@@ -54,7 +54,6 @@ export default function MovieCreate() {
       });
 
       if (form.poster_file) payload.delete("poster");
-      if (!form.poster_file && !form.poster) payload.set("poster", "https://via.placeholder.com/300x450");
 
       await api.post("/movies", payload);
       navigate("/admin/movies");

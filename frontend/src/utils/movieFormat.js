@@ -24,7 +24,7 @@ export function normalizeMovie(m) {
     genre,
     rating: m.rating != null && String(m.rating) !== "0" ? String(m.rating) : "N/A",
     date,
-    poster: m.poster || "https://via.placeholder.com/300x450",
+    poster: m.poster || "https://placehold.co/300x450/050505/e50914/png?text=Khmer+Cinema",
     release_date: m.release_date,
     description: m.description || "",
     trailer_url: m.trailer_url || "",

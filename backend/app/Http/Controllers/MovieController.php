@@ -98,8 +98,8 @@ class MovieController extends Controller
 
         if ($request->hasFile('poster_file')) {
             $validated['poster'] = $this->cloudinary->uploadImage($request->file('poster_file'), 'cinema/movies/posters');
-        } elseif (empty($validated['poster'])) {
-            $validated['poster'] = 'https://via.placeholder.com/300x450';
+        } else {
+            $validated['poster'] = $this->resolvePoster($validated['poster'] ?? null);
         }
 
         unset($validated['poster_file']);
@@ -188,6 +188,16 @@ class MovieController extends Controller
 
         if ($request->hasFile('poster_file')) {
             $validated['poster'] = $this->cloudinary->uploadImage($request->file('poster_file'), 'cinema/movies/posters');
+        } elseif (array_key_exists('poster', $validated)) {
+            $validated['poster'] = $this->resolvePoster($validated['poster'] ?? null);
+        } elseif (! $movie->poster) {
+            $validated['poster'] = $this->resolvePoster(null);
+        } else {
+            $currentPoster = $movie->poster;
+
+            if ($this->isExternalPoster($currentPoster)) {
+                $validated['poster'] = $this->cloudinary->uploadImageFromUrl($currentPoster, 'cinema/movies/posters') ?? $currentPoster;
+            }
         }
 
         unset($validated['poster_file']);
@@ -220,5 +230,33 @@ class MovieController extends Controller
         return response()->json([
             'message' => 'Movie deleted successfully',
         ]);
+    }
+
+    private function resolvePoster(?string $poster): string
+    {
+        $poster = is_string($poster) ? trim($poster) : '';
+
+        if ($poster === '') {
+            return $this->cloudinary->uploadImageFromPath(public_path('images/default-poster.svg'), 'cinema/movies/posters')
+                ?? $this->posterFallback();
+        }
+
+        if (! $this->isExternalPoster($poster)) {
+            return $poster;
+        }
+
+        return $this->cloudinary->uploadImageFromUrl($poster, 'cinema/movies/posters')
+            ?? $this->posterFallback();
+    }
+
+    private function isExternalPoster(string $poster): bool
+    {
+        return filter_var($poster, FILTER_VALIDATE_URL) !== false
+            && ! str_contains($poster, 'res.cloudinary.com');
+    }
+
+    private function posterFallback(): string
+    {
+        return 'https://placehold.co/300x450/050505/e50914/png?text=Khmer+Cinema';
     }
 }

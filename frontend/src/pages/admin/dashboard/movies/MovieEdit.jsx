@@ -77,9 +77,8 @@ export default function MovieEdit() {
       });
 
       if (form.poster_file) payload.delete("poster");
-      if (!form.poster_file && !form.poster) payload.set("poster", "https://via.placeholder.com/300x450");
 
-      await api.post(`/movies/${id}`, payload);
+      await api.put(`/movies/${id}`, payload);
       navigate("/admin/movies");
     } catch (err) {
       const errors = err?.response?.data?.errors;

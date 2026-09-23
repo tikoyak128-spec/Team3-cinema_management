@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import api from "../api/client";
+import api, { API_BASE } from "../api/client";
 import { ArrowRight, Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 import AuthShell from "./AuthShell";
 import { usePrefs } from "../context/PrefsContext";
@@ -76,7 +76,7 @@ export default function CinemaLogin() {
   const handleGoogle = (e) => {
     e.preventDefault();
     const redirect = searchParams.get("redirect");
-    const base = "/api/auth/google";
+    const base = `${API_BASE}/auth/google`;
     window.location.href = redirect
       ? `${base}?redirect=${encodeURIComponent(redirect)}`
       : base;

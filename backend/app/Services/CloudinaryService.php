@@ -4,6 +4,7 @@ namespace App\Services;
 
 use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 use Illuminate\Http\UploadedFile;
+use Throwable;
 
 class CloudinaryService
 {
@@ -18,6 +19,40 @@ class CloudinaryService
         ]);
 
         return $result['secure_url'] ?? null;
+    }
+
+    public function uploadImageFromUrl(string $url, string $folder = 'cinema/movies/posters'): ?string
+    {
+        try {
+            $result = Cloudinary::uploadApi()->upload($url, [
+                'folder' => $folder,
+                'transformation' => [
+                    'quality' => 'auto',
+                    'fetch_format' => 'auto',
+                ],
+            ]);
+
+            return $result['secure_url'] ?? null;
+        } catch (Throwable $e) {
+            return null;
+        }
+    }
+
+    public function uploadImageFromPath(string $path, string $folder = 'cinema/movies/posters'): ?string
+    {
+        try {
+            $result = Cloudinary::uploadApi()->upload($path, [
+                'folder' => $folder,
+                'transformation' => [
+                    'quality' => 'auto',
+                    'fetch_format' => 'auto',
+                ],
+            ]);
+
+            return $result['secure_url'] ?? null;
+        } catch (Throwable $e) {
+            return null;
+        }
     }
 
     public function uploadVideo(UploadedFile $file, string $folder = 'cinema/videos'): ?string
