@@ -266,6 +266,7 @@ PHP;
                     'title' => $p->title,
                     'text' => $p->text,
                     'discount' => $p->discount,
+                    'discount_code' => $p->discount_code,
                     'type' => $p->type,
                     'price_label' => $p->price_label,
                     'price_amount' => $p->price_amount,

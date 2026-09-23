@@ -101,11 +101,6 @@ class BookingController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'user_id' => [
-                'required',
-                'integer',
-                'exists:users,id',
-            ],
             'showtime_id' => [
                 'required',
                 'integer',
@@ -130,7 +125,39 @@ class BookingController extends Controller
                 'string',
                 'max:255',
             ],
+            'payment_method' => ['nullable', 'string', 'in:cash,bakong'],
         ]);
+
+        $buyer = $request->user();
+
+        if (! empty($validated['promotion_id'])) {
+            $promo = Promotion::find($validated['promotion_id']);
+
+            if (! $promo || ! $promo->is_active || ! $promo->hasActiveClaimBy($buyer)) {
+                return response()->json([
+                    'message' => 'You must claim this promotion (and meet its requirements) before you can use it.',
+                    'errors' => [
+                        'promotion_id' => ['Promotion not claimed or requirements not met.'],
+                    ],
+                ], 422);
+            }
+        }
+
+        if (! empty($validated['discount_code'])) {
+            $promoByCode = Promotion::where('discount_code', strtoupper(trim($validated['discount_code'])))
+                ->whereNotNull('discount_code')
+                ->where('discount_code', '!=', '')
+                ->first();
+
+            if ($promoByCode && ! $promoByCode->hasActiveClaimBy($buyer)) {
+                return response()->json([
+                    'message' => 'This promotion code is locked. Claim the promotion (and meet its requirements) first to unlock it.',
+                    'errors' => [
+                        'discount_code' => ['Claim the promotion before using this code.'],
+                    ],
+                ], 422);
+            }
+        }
 
         $showtime = Showtime::with('room')->findOrFail($validated['showtime_id']);
         $room = $showtime->room;
@@ -182,18 +209,21 @@ class BookingController extends Controller
         );
         $discountAmount = round($promoDiscount + $codeDiscount, 2);
 
-        return DB::transaction(function () use ($validated, $showtime, $seats, $totalAmount, $promotionId, $discountId, $discountAmount) {
+        return DB::transaction(function () use ($validated, $buyer, $showtime, $seats, $totalAmount, $promotionId, $discountId, $discountAmount) {
 
             $bookingCode = 'BK-'.strtoupper(Str::random(10));
+            $paymentMethod = $validated['payment_method'] ?? 'bakong';
+            $isCash = $paymentMethod === 'cash';
 
             $booking = Booking::create([
-                'user_id' => $validated['user_id'],
+                'user_id' => $buyer->id,
                 'showtime_id' => $validated['showtime_id'],
                 'promotion_id' => $promotionId,
                 'discount_id' => $discountId,
                 'booking_code' => $bookingCode,
                 'total_amount' => $totalAmount,
                 'discount_amount' => $discountAmount > 0 ? $discountAmount : null,
+                'payment_method' => $isCash ? 'cash' : 'bakong',
                 'status' => 'pending',
             ]);
 
@@ -203,6 +233,29 @@ class BookingController extends Controller
                     'seat_id' => $seat->id,
                     'price' => $showtime->price,
                 ]);
+            }
+
+            if ($isCash) {
+                $booking->update([
+                    'payment_expires_at' => $this->cashHoldUntil($showtime),
+                ]);
+
+                return response()->json(
+                    array_merge($booking->load([
+                        'user',
+                        'promotion',
+                        'discount',
+                        'showtime.movie',
+                        'showtime.room.cinema',
+                        'bookingSeats.seat',
+                        'tickets',
+                    ])->toArray(), [
+                        'payment' => null,
+                        'pay_at_counter' => true,
+                        'cash_due_by' => $booking->payment_expires_at->toIso8601String(),
+                    ]),
+                    201
+                );
             }
 
             $bakong = app(BakongService::class);
@@ -249,6 +302,20 @@ class BookingController extends Controller
                 201
             );
         });
+    }
+
+    /**
+     * How long a pay-at-counter reservation holds its seats: until 1 hour
+     * before the showtime starts, with a minimum 30-minute hold so last-minute
+     * bookings still get a window to reach the counter.
+     */
+    private function cashHoldUntil(Showtime $showtime): Carbon
+    {
+        $start = Carbon::parse($showtime->start_time);
+        $hold = $start->copy()->subHour();
+        $minimum = now()->addMinutes(30);
+
+        return $hold->greaterThan($minimum) ? $hold : $minimum;
     }
 
     public function searchByCode(Request $request): JsonResponse
@@ -449,6 +516,15 @@ class BookingController extends Controller
             ], 404);
         }
 
+        $user = $request->user();
+        $isStaff = in_array($user->role ?? '', ['admin', 'staff'], true);
+
+        if (! $isStaff && (int) $booking->user_id !== (int) $user->id) {
+            return response()->json([
+                'message' => 'Booking not found',
+            ], 404);
+        }
+
         if ($booking->status === 'confirmed') {
             return $this->paymentResponse($booking, 'confirmed', 'Payment already confirmed.');
         }
@@ -456,6 +532,12 @@ class BookingController extends Controller
         if ($booking->status === 'cancelled') {
             return response()->json([
                 'message' => 'Booking is cancelled',
+            ], 422);
+        }
+
+        if ($booking->payment_method === 'cash') {
+            return response()->json([
+                'message' => 'This booking will be paid at the counter. Show your booking code at the cinema.',
             ], 422);
         }
 
@@ -469,9 +551,11 @@ class BookingController extends Controller
         $result = $bakong->checkTransactionByMd5($booking->payment_md5);
 
         if (! $bakong->isPaid($result)) {
-            $verificationError = $bakong->hasError($result);
-
             $message = $result['responseMessage'] ?? 'Payment not completed yet.';
+            $lowerMessage = strtolower($message);
+            $limited = str_contains($lowerMessage, 'limit') || str_contains($lowerMessage, 'exceeded') || str_contains($lowerMessage, 'quota');
+
+            $verificationError = $bakong->hasError($result) || $limited;
 
             if ($verificationError) {
                 $message = 'Could not verify payment automatically ('.$message.'). Please wait — a staff member can confirm your payment at the counter.';
@@ -550,6 +634,12 @@ class BookingController extends Controller
         if ($booking->status !== 'pending') {
             return response()->json([
                 'message' => 'Only pending bookings can be paid.',
+            ], 422);
+        }
+
+        if ($booking->payment_method === 'cash') {
+            return response()->json([
+                'message' => 'This booking is paid at the counter. A staff member will confirm it when you pay.',
             ], 422);
         }
 

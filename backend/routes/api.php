@@ -42,6 +42,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::put('/profile', [AuthController::class, 'updateProfile']);
 
+    Route::post('promotions/{id}/claim', [PromotionController::class, 'claim'])->whereNumber('id');
+
     Route::post('/upload/image', [UploadController::class, 'uploadImage']);
     Route::post('/upload/video', [UploadController::class, 'uploadVideo']);
     Route::post('/upload', [UploadController::class, 'uploadFile']);
