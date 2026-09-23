@@ -1,0 +1,98 @@
+databases:
+  - name: cinema-api-db
+    plan: free
+
+services:
+  - type: web
+    name: cinema-api
+    runtime: php
+    rootDir: backend
+    buildCommand: composer install --no-dev --optimize-autoloader
+    startCommand: php-fpm
+    preDeployCommand: php artisan migrate --force --seed
+    plan: free
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: LOG_LEVEL
+        value: warning
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        fromDatabase:
+          name: cinema-api-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: cinema-api-db
+          property: port
+      - key: DB_DATABASE
+        fromDatabase:
+          name: cinema-api-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: cinema-api-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: cinema-api-db
+          property: password
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: SESSION_DRIVER
+        value: database
+      - key: FILESYSTEM_DISK
+        value: local
+      - key: FRONTEND_URL
+        value: https://tikoyak128-spec.github.io/Team3-cinema_management/
+      - key: APP_URL
+        sync: false
+      - key: APP_KEY
+        sync: false
+      - key: MAIL_MAILER
+        value: smtp
+      - key: MAIL_HOST
+        value: smtp.gmail.com
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_ENCRYPTION
+        value: tls
+      - key: MAIL_FROM_ADDRESS
+        sync: false
+      - key: MAIL_FROM_NAME
+        value: "Khmer Cinema"
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+      - key: BAKONG_API_TOKEN
+        sync: false
+      - key: BAKONG_API_URL
+        value: https://api-bakong.nbc.gov.kh
+      - key: BAKONG_ACCOUNT_ID
+        sync: false
+      - key: BAKONG_MERCHANT_NAME
+        value: "Khmer Cinema"
+      - key: BAKONG_MERCHANT_CITY
+        value: "Phnom Penh"
+      - key: BAKONG_CURRENCY
+        value: USD
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: CLOUDINARY_URL
+        sync: false
