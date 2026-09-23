@@ -6,6 +6,7 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   plugins: [tailwindcss(), react()],
   base: '/Team3-cinema_management/',
+  
   server: {
     host: true,
     proxy: {
