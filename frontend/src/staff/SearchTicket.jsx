@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Armchair, CalendarClock, CheckCircle2, CircleUser, Clapperboard, MapPin, QrCode, Search, SearchX, Ticket } from "lucide-react";
+import { Armchair, CalendarClock, CheckCircle2, CircleUser, Clapperboard, CreditCard, MapPin, QrCode, Search, SearchX, Ticket } from "lucide-react";
 import api from "../api/client";
 import { usePrefs } from "../context/PrefsContext";
 import PaymentModal from "../components/PaymentModal";
@@ -212,6 +212,11 @@ export default function SearchTicket() {
                 <span className={`inline-flex items-center gap-1.5 px-3 py-[5px] text-xs font-bold rounded-[20px] whitespace-nowrap ${statusBadge(b.status)}`}>
                   {b.status}
                 </span>
+                {b.payment_method === "cash" && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-[5px] text-xs font-bold rounded-[20px] whitespace-nowrap bg-[rgba(234,179,8,0.14)] text-[#eab308] border border-[rgba(234,179,8,0.3)]">
+                    <CreditCard size={13} /> {t("myBookings.payAtCounter")}
+                  </span>
+                )}
               </div>
 
               <div className="bg-[var(--app-panel2)] border border-[var(--app-edge)] rounded-[14px] p-[22px]">
@@ -245,13 +250,15 @@ export default function SearchTicket() {
                 </div>
                 {b.status === "pending" && (
                   <div className="flex justify-end items-center py-3 last:border-b-0 gap-2.5 flex-wrap">
-                    <button
-                      onClick={() => handlePay(b)}
-                      className="inline-flex items-center gap-2 border border-[var(--app-edge2)] cursor-pointer py-2.5 px-5 text-sm font-bold text-[var(--app-ink2)] rounded-xl transition-all duration-200 bg-[var(--app-panel2)] hover:bg-[var(--app-fill)] hover:-translate-y-0.5"
-                    >
-                      <QrCode size={16} />
-                      {t("staff.showQrCode")}
-                    </button>
+                    {b.payment_method !== "cash" && (
+                      <button
+                        onClick={() => handlePay(b)}
+                        className="inline-flex items-center gap-2 border border-[var(--app-edge2)] cursor-pointer py-2.5 px-5 text-sm font-bold text-[var(--app-ink2)] rounded-xl transition-all duration-200 bg-[var(--app-panel2)] hover:bg-[var(--app-fill)] hover:-translate-y-0.5"
+                      >
+                        <QrCode size={16} />
+                        {t("staff.showQrCode")}
+                      </button>
+                    )}
                     <button
                       onClick={() => handleConfirm(b)}
                       disabled={confirmingId === b.id}

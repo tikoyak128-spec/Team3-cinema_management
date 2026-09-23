@@ -103,7 +103,7 @@ export default function ShowtimeForm({ isEdit = false }) {
           </div>
           <div className="flex flex-col gap-[7px]">
             <label className="text-[13px] font-bold text-[var(--app-ink2)]">{t("adminShowtimeForm.ticketPrice")} <span className="text-[#e50914]">*</span></label>
-            <input className="bg-[var(--app-panel2)] border border-[var(--app-edge)] rounded-xl py-3 px-3.5 text-[var(--app-ink)] font-inherit text-[14px] outline-none transition-colors duration-200 focus:border-[#e50914]" type="number" step="0.50" min="0" placeholder="5.00" value={form.price} onChange={set("price")} required />
+            <input className="bg-[var(--app-panel2)] border border-[var(--app-edge)] rounded-xl py-3 px-3.5 text-[var(--app-ink)] font-inherit text-[14px] outline-none transition-colors duration-200 focus:border-[#e50914]" type="number" step="0.01" min="0" placeholder="5.00" value={form.price} onChange={set("price")} required />
           </div>
           <div className="flex gap-3 items-center mt-[26px] col-span-full max-sm:col-span-1">
             <button type="submit" className="inline-flex items-center gap-2 border-none cursor-pointer font-inherit py-[11px] px-5 text-[14px] font-bold rounded-xl transition-all duration-200 bg-[#e50914] text-white shadow-[0_4px_14px_rgba(229,9,20,0.35)] hover:bg-[#f40612] hover:-translate-y-px" disabled={submitting}>

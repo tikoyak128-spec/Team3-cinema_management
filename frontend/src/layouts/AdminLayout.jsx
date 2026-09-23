@@ -80,7 +80,7 @@ export default function AdminLayout({ children }) {
 
   return (
     <div
-      className={`flex min-h-screen w-full overflow-x-hidden transition-colors duration-300 bg-[#f6f6f6] text-[#4a4a4a] dark:bg-dark dark:text-[#e2e8f0]`}
+      className={`flex h-screen w-full overflow-hidden transition-colors duration-300 bg-[#f6f6f6] text-[#4a4a4a] dark:bg-dark dark:text-[#e2e8f0]`}
     >
       {/* Overlay with background blur when sidebar is open (mobile only) */}
       <div
@@ -95,10 +95,10 @@ export default function AdminLayout({ children }) {
         className={`transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
           isMobile
             ? `fixed top-0 left-0 z-[100] h-screen w-[270px] transform ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`
-            : `shrink-0 border-r bg-gradient-to-b from-white to-[#f1f1f1] dark:from-[#111111] dark:to-[#0a0a0a] border-[rgba(0,0,0,0.1)] dark:border-dark-border ${compact ? "w-[94px]" : "w-[270px]"}`
+            : `shrink-0 h-full border-r bg-gradient-to-b from-white to-[#f1f1f1] dark:from-[#111111] dark:to-[#0a0a0a] border-[rgba(0,0,0,0.1)] dark:border-dark-border ${compact ? "w-[94px]" : "w-[270px]"}`
         }`}
       >
-        <div className="flex min-h-full flex-col overflow-y-auto overflow-x-hidden">
+        <div className="flex h-full flex-col overflow-hidden">
         <div className={`flex min-h-[70px] items-center gap-2 border-b px-[18px] border-[rgba(0,0,0,0.1)] dark:border-dark-border ${compact ? "justify-center" : "justify-between"}`}>
           <div className="flex cursor-pointer items-center gap-3 overflow-hidden whitespace-nowrap" onClick={() => navigate("/")}>
             {!compact && (
@@ -140,7 +140,7 @@ export default function AdminLayout({ children }) {
           )}
         </div>
 
-        <nav className={`flex flex-1 flex-col gap-1.5 px-2.5 py-4 ${compact ? "items-center" : ""}`}>
+        <nav className={`flex flex-1 min-h-0 flex-col gap-1.5 px-2.5 py-4 overflow-y-auto overflow-x-hidden ${compact ? "items-center" : ""}`}>
           {adminNavSections.map((section) => (
             <div key={section.label} className="mb-3">
               <div className={`flex items-center gap-2 px-3 pb-2 pt-1.5 text-[11px] font-bold uppercase tracking-[1.2px] text-muted ${compact ? "justify-center !px-0 !py-2" : ""}`}>
@@ -277,9 +277,9 @@ export default function AdminLayout({ children }) {
       </aside>
 
       {/* Main Content */}
-      <div className="flex min-h-screen w-full flex-col">
+      <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
         {/* Top Header */}
-        <header className="sticky top-0 z-[50] flex h-[70px] items-center justify-between border-b px-7 backdrop-blur-[12px] bg-[rgba(255,255,255,0.85)] dark:bg-[var(--app-header)] border-[rgba(0,0,0,0.1)] dark:border-dark-border transition-colors duration-300">
+        <header className="z-[50] flex h-[70px] shrink-0 items-center justify-between border-b px-7 backdrop-blur-[12px] bg-[rgba(255,255,255,0.85)] dark:bg-[var(--app-header)] border-[rgba(0,0,0,0.1)] dark:border-dark-border transition-colors duration-300">
           <div className="flex items-center gap-2">
             <button className={btnBase} onClick={toggleSidebar} title={t(isMobile ? "admin.openSidebar" : compact ? "admin.expandSidebar" : "admin.collapseSidebar")}>
               <PanelLeft size={18} />
@@ -317,7 +317,7 @@ export default function AdminLayout({ children }) {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-7">
+        <main className="flex-1 min-h-0 overflow-y-auto p-7">
           {children || (
             <div className="flex min-h-[450px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed p-10 text-center bg-white border-[rgba(0,0,0,0.1)] dark:bg-dark-card dark:border-dark-border">
               <div className="mb-1 text-brand"><Clapperboard size={48} /></div>

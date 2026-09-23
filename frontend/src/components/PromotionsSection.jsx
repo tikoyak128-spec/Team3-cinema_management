@@ -5,10 +5,13 @@ import {
   BadgePercent,
   Check,
   Clock,
+  Copy,
   Crown,
   Flame,
   Gift,
   GraduationCap,
+  Loader2,
+  Lock,
   Popcorn,
   Star,
   Ticket,
@@ -16,6 +19,7 @@ import {
 } from "lucide-react";
 import api from "../api/client";
 import { usePrefs } from "../context/PrefsContext";
+import { useAuth } from "../context/AuthContext";
 
 const fallbackPromotions = [
   {
@@ -115,35 +119,129 @@ function PromoIcon({ promo, size = 20, className }) {
 }
 
 const claimDestination = (promo) => {
-  if (promo.type === "loyalty") return "/services";
-  if (promo.type === "tickets" || promo.type === "combo") {
-    return promo.id ? `/now-showing?promo=${promo.id}` : "/now-showing";
-  }
-  return null; // snacks -> inline claim at the counter
+  if (promo.type === "loyalty" && !promo.discount_code) return "/services";
+  return null; // discount promos reveal a code you can use at checkout
 };
 
-function ClaimButton({ promo, onClaim, claimed }) {
+function RequirementRows({ info }) {
   const { t } = usePrefs();
+  const rows = [];
+
+  if (info?.required_bookings > 0) {
+    rows.push(
+      <span key="bookings" className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[var(--app-mute)]">
+        <Ticket size={12} className="shrink-0" />
+        {t("promo.reqBookings", { n: info.required_bookings })}
+        <b className="text-[var(--app-ink)]">{info.completed_bookings}/{info.required_bookings}</b>
+      </span>
+    );
+  }
+  if (info?.required_spent > 0) {
+    rows.push(
+      <span key="spent" className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[var(--app-mute)]">
+        <BadgePercent size={12} className="shrink-0" />
+        {t("promo.reqSpend", { amount: Number(info.required_spent).toFixed(0) })}
+        <b className="text-[var(--app-ink)]">
+          ${Number(info.total_spent).toFixed(2)} / ${Number(info.required_spent).toFixed(2)}
+        </b>
+      </span>
+    );
+  }
+  if (info?.requires_verified_email) {
+    rows.push(
+      <span key="email" className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[var(--app-mute)]">
+        <Check size={12} className="shrink-0 text-emerald-500" />
+        {info.email_verified ? t("promo.reqEmailDone") : t("promo.reqEmail")}
+      </span>
+    );
+  }
+
+  return <div className="flex flex-col items-start gap-1">{rows}</div>;
+}
+
+function ClaimButton({ promo, onClaim, claimed, info, claiming, claimError }) {
+  const { t } = usePrefs();
+  const { isAuthenticated } = useAuth();
+  const [copied, setCopied] = useState(false);
+
+  const copyCode = async (e) => {
+    e.stopPropagation();
+    if (!claimed) return;
+    try {
+      await navigator.clipboard.writeText(claimed);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch {
+      // clipboard unavailable — leave code visible to copy manually
+    }
+  };
+
   if (claimed) {
     return (
-      <div className="flex flex-col items-center sm:items-end gap-1">
+      <div className="flex flex-col items-center sm:items-end gap-1.5">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 text-white text-xs sm:text-[13px] font-bold px-4 py-2.5">
           <Check size={13} /> {t("promo.claimed")}
         </span>
-        <span className="text-[10px] font-mono font-semibold tracking-widest uppercase text-emerald-600 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-md">
+        <span className="inline-flex items-center gap-1.5 text-[11px] font-mono font-black tracking-widest uppercase text-emerald-600 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-lg">
           {claimed}
+          <button
+            type="button"
+            onClick={copyCode}
+            title={t("promo.copyCode")}
+            className="text-emerald-600 hover:text-emerald-400 transition-colors cursor-pointer inline-flex items-center no-underline"
+          >
+            {copied ? <Check size={13} /> : <Copy size={13} />}
+          </button>
+        </span>
+        <span className="text-[10px] text-[var(--app-mute)] font-semibold text-center sm:text-right">
+          {t("promo.useCodeHint")}
         </span>
       </div>
     );
   }
+
+  if (claiming) {
+    return (
+      <button
+        type="button"
+        disabled
+        className="inline-flex items-center gap-1.5 bg-brand/80 text-white text-xs sm:text-[13px] font-bold px-4 py-2.5 rounded-full transition-all no-underline cursor-default opacity-80"
+      >
+        <Loader2 size={13} className="animate-spin" /> {t("promo.claiming")}
+      </button>
+    );
+  }
+
+  const needsLogin = !isAuthenticated;
+  const isLocked = !needsLogin && info && !info.eligible;
+
+  if (isLocked) {
+    return (
+      <div className="flex flex-col items-center sm:items-end gap-1.5">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--app-fill)] border border-[var(--app-edge)] text-[var(--app-mute)] text-xs sm:text-[13px] font-bold px-4 py-2.5">
+          <Lock size={12} /> {t("promo.locked")}
+        </span>
+        <RequirementRows info={info} />
+        {claimError && (
+          <span className="text-[10px] text-brand font-semibold text-center sm:text-right max-w-[220px]">{claimError}</span>
+        )}
+      </div>
+    );
+  }
+
   return (
-    <button
-      type="button"
-      onClick={() => onClaim(promo)}
-      className="inline-flex items-center gap-1.5 bg-brand hover:bg-brand-hover text-white text-xs sm:text-[13px] font-bold px-4 py-2.5 rounded-full transition-all no-underline cursor-pointer"
-    >
-      {t("promo.claimNow")} <ArrowRight size={13} />
-    </button>
+    <div className="flex flex-col items-center sm:items-end gap-1.5">
+      <button
+        type="button"
+        onClick={() => onClaim(promo)}
+        className="inline-flex items-center gap-1.5 bg-brand hover:bg-brand-hover text-white text-xs sm:text-[13px] font-bold px-4 py-2.5 rounded-full transition-all no-underline cursor-pointer"
+      >
+        {needsLogin ? t("promo.loginToClaim") : t("promo.claimNow")} <ArrowRight size={13} />
+      </button>
+      {claimError && (
+        <span className="text-[10px] text-brand font-semibold text-center sm:text-right max-w-[220px]">{claimError}</span>
+      )}
+    </div>
   );
 }
 
@@ -192,22 +290,54 @@ export default function PromotionsSection() {
   const { t } = usePrefs();
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { isAuthenticated } = useAuth();
   const [promotions, setPromotions] = useState(fallbackPromotions);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [claimed, setClaimed] = useState({});
+  const [claimInfo, setClaimInfo] = useState({});
+  const [claimingKey, setClaimingKey] = useState(null);
+  const [claimErrors, setClaimErrors] = useState({});
 
   const keyOf = (promo) => String(promo.id || promo.title);
-  const handleClaim = (promo) => {
+
+  const handleClaim = async (promo) => {
     const dest = claimDestination(promo);
     if (dest) {
       navigate(dest);
       return;
     }
-    setClaimed((prev) => ({
-      ...prev,
-      [keyOf(promo)]: `KC-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
-    }));
+
+    const key = keyOf(promo);
+
+    if (!isAuthenticated || !promo.id) {
+      navigate("/login");
+      return;
+    }
+
+    setClaimingKey(key);
+    setClaimErrors((prev) => ({ ...prev, [key]: null }));
+    try {
+      const res = await api.post(`/promotions/${promo.id}/claim`);
+      const code = res.data?.discount_code;
+      setClaimed((prev) => ({ ...prev, [key]: code }));
+      setClaimInfo((prev) => ({
+        ...prev,
+        [key]: { ...(prev[key] || {}), eligible: true, claimed: true, claimed_code: code },
+      }));
+    } catch (err) {
+      const data = err?.response?.data || {};
+      const claim = data.claim;
+      setClaimErrors((prev) => ({
+        ...prev,
+        [key]: data.message || "Unable to claim this promotion.",
+      }));
+      if (claim) {
+        setClaimInfo((prev) => ({ ...prev, [key]: claim }));
+      }
+    } finally {
+      setClaimingKey(null);
+    }
   };
 
   useEffect(() => {
@@ -220,6 +350,18 @@ export default function PromotionsSection() {
         if (Array.isArray(list) && list.length > 0) {
           setPromotions(list);
           setLoadError(false);
+
+          const nextClaimed = {};
+          const nextInfo = {};
+          list.forEach((p) => {
+            const key = String(p.id || p.title);
+            nextInfo[key] = p.claim;
+            if (p.claim?.claimed && p.discount_code) {
+              nextClaimed[key] = p.discount_code;
+            }
+          });
+          setClaimed(nextClaimed);
+          setClaimInfo(nextInfo);
         }
       })
       .catch(() => {
@@ -319,7 +461,14 @@ export default function PromotionsSection() {
                     <span className="text-2xl font-black text-brand">{promo.price_amount}</span>
                   </div>
                   <div className="w-full flex justify-center md:justify-end">
-                    <ClaimButton promo={promo} onClaim={handleClaim} claimed={claimed[keyOf(promo)]} />
+                    <ClaimButton
+                        promo={promo}
+                        onClaim={handleClaim}
+                        claimed={claimed[keyOf(promo)]}
+                        info={claimInfo[keyOf(promo)]}
+                        claiming={claimingKey === keyOf(promo)}
+                        claimError={claimErrors[keyOf(promo)]}
+                      />
                   </div>
                 </div>
               </div>
@@ -363,7 +512,14 @@ export default function PromotionsSection() {
                           {t("promo.endsIn")} {promo.expires_days} {t("promo.days")}
                         </span>
                       </div>
-                      <ClaimButton promo={promo} onClaim={handleClaim} claimed={claimed[keyOf(promo)]} />
+<ClaimButton
+                      promo={promo}
+                      onClaim={handleClaim}
+                      claimed={claimed[keyOf(promo)]}
+                      info={claimInfo[keyOf(promo)]}
+                      claiming={claimingKey === keyOf(promo)}
+                      claimError={claimErrors[keyOf(promo)]}
+                    />
                     </div>
                   </div>
                 </div>

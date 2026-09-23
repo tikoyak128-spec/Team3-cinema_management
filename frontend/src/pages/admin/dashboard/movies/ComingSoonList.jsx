@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CalendarCheck, CalendarClock, Clapperboard, Pencil, Plus, Search, Tag, Upload } from "lucide-react";
+import { CalendarClock, Clapperboard, Pencil, Plus, Search, Tag, Upload } from "lucide-react";
+import Select from "../../../../components/Select";
 import api from "../../../../api/client";
 import { usePrefs } from "../../../../context/PrefsContext";
 
@@ -20,7 +21,6 @@ export default function ComingSoonList() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
-  const [tab, setTab] = useState("soon");
   const [editingId, setEditingId] = useState(null);
   const [draftDate, setDraftDate] = useState("");
   const [saving, setSaving] = useState(false);
@@ -53,9 +53,7 @@ export default function ComingSoonList() {
     const term = search.trim().toLowerCase();
     return movies
       .filter((m) => {
-        const future = isFuture(m.release_date);
-        if (tab === "soon" && !future) return false;
-        if (tab === "now" && future) return false;
+        if (!isFuture(m.release_date)) return false;
         const matchesSearch =
           !term ||
           m.title.toLowerCase().includes(term) ||
@@ -65,10 +63,9 @@ export default function ComingSoonList() {
         return matchesSearch && matchesCategory;
       })
       .sort((a, b) => String(a.release_date || "").localeCompare(String(b.release_date || "")));
-  }, [movies, tab, search, category]);
+  }, [movies, search, category]);
 
   const soonCount = movies.filter((m) => isFuture(m.release_date)).length;
-  const nowCount = movies.length - soonCount;
 
   const saveDate = async (id) => {
     if (!draftDate) return;
@@ -108,15 +105,11 @@ export default function ComingSoonList() {
     return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
   };
 
-  const badge = (m) => {
-    const future = isFuture(m.release_date);
-    const Icon = future ? CalendarClock : CalendarCheck;
-    return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${future ? "bg-[rgba(234,179,8,0.12)] border border-[rgba(234,179,8,0.4)] text-[#e0a800]" : "bg-[rgba(34,197,94,0.12)] border border-[rgba(34,197,94,0.4)] text-[#22c55e]"}`}>
-        <Icon size={12} /> {future ? t("adminComingSoon.soonBadge") : t("adminComingSoon.nowBadge")}
-      </span>
-    );
-  };
+  const badge = () => (
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-[rgba(234,179,8,0.12)] border border-[rgba(234,179,8,0.4)] text-[#e0a800]">
+      <CalendarClock size={12} /> {t("adminComingSoon.soonBadge")}
+    </span>
+  );
 
   const rows = (m) => (
     <>
@@ -160,25 +153,14 @@ export default function ComingSoonList() {
       <td>{badge(m)}</td>
       <td>
         <div className="flex gap-2 items-center">
-          {!isFuture(m.release_date) ? (
-            <button
-              className="inline-flex items-center gap-1.5 border-none cursor-pointer font-inherit py-2 px-3 text-[12px] font-bold rounded-[10px] bg-[rgba(234,179,8,0.12)] text-[#e0a800] border border-[rgba(234,179,8,0.3)] hover:bg-[rgba(234,179,8,0.2)] disabled:opacity-50"
-              title={t("adminComingSoon.markSoon")}
-              disabled={saving}
-              onClick={() => navigate(`/admin/movies/${m.id}/edit`)}
-            >
-              <CalendarClock size={13} /> {t("adminComingSoon.editMovie")}
-            </button>
-          ) : (
-            <button
-              className="inline-flex items-center gap-1.5 border-none cursor-pointer font-inherit py-2 px-3 text-[12px] font-bold rounded-[10px] bg-[rgba(34,197,94,0.12)] text-[#22c55e] border border-[rgba(34,197,94,0.3)] hover:bg-[rgba(34,197,94,0.2)] disabled:opacity-50"
-              title={t("adminComingSoon.releaseNow")}
-              disabled={saving}
-              onClick={() => setReleasedToday(m.id)}
-            >
-              <Upload size={13} /> {t("adminComingSoon.releaseNow")}
-            </button>
-          )}
+          <button
+            className="inline-flex items-center gap-1.5 border-none cursor-pointer font-inherit py-2 px-3 text-[12px] font-bold rounded-[10px] bg-[rgba(34,197,94,0.12)] text-[#22c55e] border border-[rgba(34,197,94,0.3)] hover:bg-[rgba(34,197,94,0.2)] disabled:opacity-50"
+            title={t("adminComingSoon.releaseNow")}
+            disabled={saving}
+            onClick={() => setReleasedToday(m.id)}
+          >
+            <Upload size={13} /> {t("adminComingSoon.releaseNow")}
+          </button>
         </div>
       </td>
     </>
@@ -204,22 +186,23 @@ export default function ComingSoonList() {
       )}
 
       <div className="flex flex-col md:flex-row md:items-center gap-3 flex-wrap">
-        <div className="flex w-full sm:w-auto bg-[var(--app-panel2)] border border-[var(--app-edge)] rounded-full p-1 gap-1">
-          <button className={`flex-1 sm:flex-none text-[13px] font-bold px-5 py-2.5 rounded-full transition-all cursor-pointer ${tab === "soon" ? "bg-brand text-white shadow-[0_4px_14px_rgba(229,9,20,0.35)]" : "text-[var(--app-mute)] hover:text-[var(--app-ink)]"}`} onClick={() => setTab("soon")}>
-            {t("nav.comingSoon")} <span className="ml-1 opacity-70">({soonCount})</span>
-          </button>
-          <button className={`flex-1 sm:flex-none text-[13px] font-bold px-5 py-2.5 rounded-full transition-all cursor-pointer ${tab === "now" ? "bg-brand text-white shadow-[0_4px_14px_rgba(229,9,20,0.35)]" : "text-[var(--app-mute)] hover:text-[var(--app-ink)]"}`} onClick={() => setTab("now")}>
-            {t("nav.nowShowing")} <span className="ml-1 opacity-70">({nowCount})</span>
-          </button>
+        <div className="flex w-full sm:w-auto items-center gap-1.5 bg-[rgba(234,179,8,0.12)] border border-[rgba(234,179,8,0.3)] rounded-full px-4 py-2.5">
+          <CalendarClock size={14} className="text-[#e0a800]" />
+          <span className="text-[13px] font-bold text-[#e0a800]">{t("nav.comingSoon")} <span className="opacity-70">({soonCount})</span></span>
         </div>
         <div className="flex items-center gap-2.5 bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-xl py-2.5 px-3.5 text-[var(--app-mute)] flex-1 md:max-w-xs">
           <span className="shrink-0"><Search size={16} /></span>
           <input className="bg-transparent border-none outline-none text-[var(--app-ink)] font-inherit text-[14px] w-full" placeholder={t("adminComingSoon.searchPlaceholder")} value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
-        <select className="bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-xl py-2.5 px-3.5 text-[14px] text-[var(--app-ink)] outline-none cursor-pointer" value={category} onChange={(e) => setCategory(e.target.value)}>
+        <Select
+          containerClassName="relative w-full sm:w-auto"
+          className="bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-xl py-2.5 pl-3.5 pr-3 text-[14px] text-[var(--app-ink)] font-inherit outline-none cursor-pointer appearance-none w-full sm:w-[200px]"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+        >
           <option value="all">{t("adminComingSoon.allCategories")}</option>
           {categories.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
-        </select>
+        </Select>
       </div>
 
       <div className="bg-[var(--app-panel)] border border-[var(--app-edge)] rounded-2xl overflow-hidden">
@@ -267,7 +250,7 @@ export default function ComingSoonList() {
             </div>
 
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full border-collapse text-[14px] [&>thead_th]:text-left [&>thead_th]:py-[14px] [&>thead_th]:px-[18px] [&>thead_th]:text-[var(--app-mute)] [&>thead_th]:text-[12px] [&>thead_th]:font-bold [&>thead_th]:uppercase [&>thead_th]:tracking-widest [&>thead_th]:border-b [&>thead_th]:border-[var(--app-edge)] [&>thead_th]:bg-[var(--app-fill)] [&>thead_th]:whitespace-nowrap [&>th]:sticky [&>th]:top-[70px] [&>th]:z-5 [&>th]:bg-[var(--app-panel)] [&>tbody_td]:py-[14px] [&>tbody_td]:px-[18px] [&>tbody_td]:border-b [&>tbody_td]:border-[var(--app-edge)] [&>tbody_td]:text-[var(--app-ink2)] [&>tbody_td]:align-middle [&>tbody>tr]:transition-colors [&>tbody>tr]:duration-150 [&>tbody>tr:hover]:bg-[var(--app-fill)] [&>tbody>tr:last-child>td]:border-b-0">
+              <table className="w-full border-collapse text-[14px] [&>thead_th]:text-left [&>thead_th]:py-[14px] [&>thead_th]:px-[18px] [&>thead_th]:text-[var(--app-mute)] [&>thead_th]:text-[12px] [&>thead_th]:font-bold [&>thead_th]:uppercase [&>thead_th]:tracking-widest [&>thead_th]:border-b [&>thead_th]:border-[var(--app-edge)] [&>thead_th]:bg-[var(--app-fill)] [&>thead_th]:whitespace-nowrap [&>th]:sticky [&>th]:top-0 [&>th]:z-5 [&>th]:bg-[var(--app-panel)] [&>tbody_td]:py-[14px] [&>tbody_td]:px-[18px] [&>tbody_td]:border-b [&>tbody_td]:border-[var(--app-edge)] [&>tbody_td]:text-[var(--app-ink2)] [&>tbody_td]:align-middle [&>tbody>tr]:transition-colors [&>tbody>tr]:duration-150 [&>tbody>tr:hover]:bg-[var(--app-fill)] [&>tbody>tr:last-child>td]:border-b-0">
                 <thead>
                   <tr>
                     <th>{t("adminMovieList.movie")}</th>

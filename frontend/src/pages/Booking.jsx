@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, DoorOpen, Loader2, TriangleAlert, ScanLine, MapPin, Building2, ChevronDown, BadgePercent, Download, Receipt, CreditCard, CheckCircle2 } from "lucide-react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { ArrowLeft, DoorOpen, Loader2, TriangleAlert, ScanLine, MapPin, Building2, ChevronDown, BadgePercent, Download, Receipt, CreditCard, CheckCircle2, Lock } from "lucide-react";
 import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import TicketCard from "../components/TicketCard";
@@ -41,6 +41,7 @@ export default function Booking() {
   const [checking, setChecking] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("bakong");
   const [activePromo, setActivePromo] = useState(null);
   const [availableDiscounts, setAvailableDiscounts] = useState([]);
   const [discountInput, setDiscountInput] = useState("");
@@ -218,6 +219,13 @@ export default function Booking() {
     return Number.isFinite(pct) && pct > 0 ? pct : 0;
   }, [activePromo]);
 
+  const promoClaimed = activePromo?.claim?.claimed === true;
+  const promoLocked = !!activePromo && promoRate > 0 && !promoClaimed;
+  const promoActive = !!activePromo && promoRate > 0 && promoClaimed;
+
+  const isCashBooking = booking?.payment_method === "cash";
+  const isBakongBooking = !!booking && !isCashBooking;
+
   const discountAmount = useMemo(() => {
     if (!promoRate) return 0;
     return Math.round(subtotal * (promoRate / 100) * 100) / 100;
@@ -295,14 +303,24 @@ export default function Booking() {
     setErrorMsg("");
     try {
       const res = await api.post("/bookings", {
-        user_id: user.id,
         showtime_id: selectedShowtimeId,
         seat_ids: selectedSeats,
-        ...(activePromo && promoRate > 0 ? { promotion_id: Number(promoId) } : {}),
+        payment_method: paymentMethod,
+        ...(promoActive ? { promotion_id: Number(promoId) } : {}),
         ...(appliedDiscount ? { discount_code: appliedDiscount.code } : {}),
       });
       const data = res.data;
       const pay = data.payment;
+
+      if (data.pay_at_counter) {
+        setBooking(data);
+        setPayment(null);
+        setPaymentStatus("pending");
+        setPaymentError("");
+        setErrorMsg("");
+        setStep(2);
+        return;
+      }
 
       if (!pay || !pay.qr) {
         setPaymentError("Could not generate Bakong payment code.");
@@ -321,7 +339,7 @@ export default function Booking() {
       const msg =
         data.message ||
         data.errors?.[0] ||
-        "Could not create booking. Check your Bakong account configuration.";
+        "Could not create booking. Please try again.";
       setErrorMsg(msg);
       setPaymentError(msg);
 
@@ -412,12 +430,12 @@ export default function Booking() {
   };
 
   useEffect(() => {
-    if (step === 2 && paymentStatus === "pending" && booking?.id) {
+    if (step === 2 && paymentStatus === "pending" && booking?.id && !isCashBooking) {
       clearPoll();
       pollRef.current = setInterval(checkPayment, 15000);
       return () => clearPoll();
     }
-  }, [step, paymentStatus, booking?.id]);
+  }, [step, paymentStatus, booking?.id, isCashBooking]);
 
   return (
     <div className="bg-[var(--app-page)] text-[var(--app-ink)] font-['Mulish','Kantumruy_Pro',-apple-system,BlinkMacSystemFont,'Segoe_UI',sans-serif]">
@@ -451,7 +469,7 @@ export default function Booking() {
           )}
         </div>
 
-        {activePromo && promoRate > 0 && (
+        {promoActive && (
           <div className="flex items-center gap-3 bg-[rgba(34,197,94,0.12)] border border-[rgba(34,197,94,0.35)] text-[#1f9d55] rounded-2xl px-4 py-3.5">
             <span className="w-10 h-10 rounded-xl bg-[#22c55e] text-white flex items-center justify-center shrink-0">
               <BadgePercent size={18} />
@@ -460,6 +478,21 @@ export default function Booking() {
               <div className="text-sm font-[800]">{activePromo.title}</div>
               <div className="text-[12px] text-[var(--app-ink2)] font-[600]">
                 {promoRate}% OFF — applied automatically to your ticket total
+              </div>
+            </div>
+          </div>
+        )}
+
+        {promoLocked && (
+          <div className="flex items-center gap-3 bg-[rgba(251,191,36,0.12)] border border-[rgba(251,191,36,0.35)] text-[#b45309] rounded-2xl px-4 py-3.5">
+            <span className="w-10 h-10 rounded-xl bg-[#f59e0b] text-white flex items-center justify-center shrink-0">
+              <Lock size={18} />
+            </span>
+            <div className="min-w-0">
+              <div className="text-sm font-[800]">{activePromo.title}</div>
+              <div className="text-[12px] font-[600]">
+                Claim this promotion (and meet its requirements) before using it —{" "}
+                <Link to="/promotions" className="underline font-[800]">view promotions</Link>.
               </div>
             </div>
           </div>
@@ -760,7 +793,7 @@ export default function Booking() {
                   </span>
                   <b className="text-[var(--app-ink)]">{renderPrice(subtotal)}</b>
                 </div>
-                {activePromo && promoRate > 0 && (
+                {promoActive && (
                   <div className="flex justify-between gap-4">
                     <span className="text-[var(--app-mute)] font-[600] inline-flex items-center gap-1.5">
                       <BadgePercent size={14} className="text-[#22c55e]" />
@@ -794,7 +827,11 @@ export default function Booking() {
                 <div>
                   <h2 className="text-base font-[800] leading-none">Payment</h2>
                   <p className="text-[12px] text-[var(--app-mute)] font-[600] mt-1">
-                    Secure checkout with Bakong
+                    {isBakongBooking
+                      ? "Secure checkout with Bakong"
+                      : isCashBooking
+                      ? "Reserved — pay at the cinema counter"
+                      : "Pay online with Bakong or reserve and pay at the counter"}
                   </p>
                 </div>
               </div>
@@ -802,14 +839,50 @@ export default function Booking() {
               <div className="mt-6 flex flex-col items-center justify-center flex-1 text-center gap-3 rounded-2xl border border-dashed border-[var(--app-edge2)] bg-[var(--app-panel2)]/50 px-5 py-8">
                 {!booking && (
                   <>
-                    <ScanLine size={34} className="text-brand" />
-                    <p className="text-[13px] text-[var(--app-mute)] font-[600] max-w-[240px] leading-relaxed">
-                      Tap confirm to generate a Bakong QR code and complete your payment.
-                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-[440px]">
+                      <button
+                        type="button"
+                        className={`flex flex-col items-start gap-2.5 border-2 cursor-pointer px-4 py-4 rounded-2xl transition-all duration-200 text-left ${
+                          paymentMethod === "bakong"
+                            ? "border-brand bg-brand/10"
+                            : "border-[var(--app-edge2)] hover:border-brand/50"
+                        }`}
+                        onClick={() => setPaymentMethod("bakong")}
+                      >
+                        <span className="w-9 h-9 rounded-xl bg-brand/15 border border-brand/30 text-brand flex items-center justify-center">
+                          <ScanLine size={17} />
+                        </span>
+                        <span>
+                          <span className="block text-[13px] font-[800] text-[var(--app-ink)]">Pay online — Bakong</span>
+                          <span className="block text-[11px] text-[var(--app-mute)] font-[600] mt-0.5 leading-relaxed">
+                            Instant QR. Tickets issued automatically once paid.
+                          </span>
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`flex flex-col items-start gap-2.5 border-2 cursor-pointer px-4 py-4 rounded-2xl transition-all duration-200 text-left ${
+                          paymentMethod === "cash"
+                            ? "border-brand bg-brand/10"
+                            : "border-[var(--app-edge2)] hover:border-brand/50"
+                        }`}
+                        onClick={() => setPaymentMethod("cash")}
+                      >
+                        <span className="w-9 h-9 rounded-xl bg-[rgba(234,179,8,0.15)] border border-[rgba(234,179,8,0.35)] text-[#eab308] flex items-center justify-center">
+                          <CreditCard size={17} />
+                        </span>
+                        <span>
+                          <span className="block text-[13px] font-[800] text-[var(--app-ink)]">Pay at counter — Cash</span>
+                          <span className="block text-[11px] text-[var(--app-mute)] font-[600] mt-0.5 leading-relaxed">
+                            Reserve your seats now and pay in person. Staff confirms your ticket.
+                          </span>
+                        </span>
+                      </button>
+                    </div>
                   </>
                 )}
 
-                {booking && paymentStatus === "pending" && (
+                {booking && isBakongBooking && paymentStatus === "pending" && (
                   <>
                     <span className="w-14 h-14 rounded-full bg-brand/10 border border-brand/25 text-brand flex items-center justify-center">
                       <ScanLine size={24} />
@@ -818,6 +891,28 @@ export default function Booking() {
                       <div className="text-[15px] font-[800] text-[var(--app-ink)]">QR code ready</div>
                       <p className="text-[12px] text-[var(--app-mute)] font-[600] mt-1 max-w-[230px] leading-relaxed">
                         Reopen the payment window to scan with your Bakong app.
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {booking && isCashBooking && (
+                  <>
+                    <span className="w-14 h-14 rounded-full bg-[rgba(234,179,8,0.15)] border border-[rgba(234,179,8,0.35)] text-[#eab308] flex items-center justify-center">
+                      <CreditCard size={24} />
+                    </span>
+                    <div>
+                      <div className="text-[15px] font-[800] text-[var(--app-ink)]">Seats reserved</div>
+                      <p className="text-[12px] text-[var(--app-mute)] font-[600] mt-1 max-w-[280px] leading-relaxed">
+                        Show your booking code{" "}
+                        <b className="font-mono text-[var(--app-ink)]">{booking.booking_code || `#${booking.id}`}</b>{" "}
+                        at the cinema counter and pay before{" "}
+                        <b className="text-[var(--app-ink)]">
+                          {booking.payment_expires_at
+                            ? new Date(booking.payment_expires_at).toLocaleString()
+                            : "showtime"}
+                        </b>{" "}
+                        to receive your tickets.
                       </p>
                     </div>
                   </>
@@ -846,7 +941,12 @@ export default function Booking() {
                   >
                     {creating ? (
                       <>
-                        <Loader2 size={16} className="animate-spin" /> Creating payment code...
+                        <Loader2 size={16} className="animate-spin" />{" "}
+                        {paymentMethod === "cash" ? "Reserving seats..." : "Creating payment code..."}
+                      </>
+                    ) : paymentMethod === "cash" ? (
+                      <>
+                        <CheckCircle2 size={16} /> Reserve &amp; Pay at Counter · {renderPrice(totalAmount)}
                       </>
                     ) : (
                       <>
@@ -856,7 +956,7 @@ export default function Booking() {
                   </button>
                 )}
 
-                {booking && paymentStatus === "pending" && (
+                {booking && isBakongBooking && paymentStatus === "pending" && (
                   <button
                     className="w-full inline-flex items-center justify-center gap-2 bg-[#e50914] text-white shadow-[0_6px_18px_rgba(229,9,20,0.35)] border-none cursor-pointer px-[22px] py-3.5 text-sm font-[800] rounded-xl transition-all duration-200 hover:bg-[#f40612] hover:-translate-y-0.5"
                     onClick={() => setShowPaymentModal(true)}
@@ -865,16 +965,29 @@ export default function Booking() {
                   </button>
                 )}
 
-                <button
-                  className="w-full bg-transparent text-[var(--app-ink2)] border border-[var(--app-edge2)] cursor-pointer px-[18px] py-3 text-sm font-[700] rounded-xl transition-all duration-200 hover:bg-[var(--app-fill)]"
-                  onClick={() => setStep(1)}
-                >
-                  ← Back to Seats
-                </button>
+                {booking && isCashBooking && (
+                  <button
+                    className="w-full inline-flex items-center justify-center gap-2 bg-[#22c55e] text-white border-none cursor-pointer px-[22px] py-3.5 text-sm font-[800] rounded-xl transition-all duration-200 hover:bg-[#16a34a] hover:-translate-y-0.5"
+                    onClick={() => navigate("/my-bookings")}
+                  >
+                    <CheckCircle2 size={16} /> View My Bookings
+                  </button>
+                )}
+
+                {!isCashBooking && (
+                  <button
+                    className="w-full bg-transparent text-[var(--app-ink2)] border border-[var(--app-edge2)] cursor-pointer px-[18px] py-3 text-sm font-[700] rounded-xl transition-all duration-200 hover:bg-[var(--app-fill)]"
+                    onClick={() => setStep(1)}
+                  >
+                    ← Back to Seats
+                  </button>
+                )}
               </div>
 
               <p className="mt-4 text-[11px] text-[var(--app-mute)] font-[600] text-center leading-relaxed">
-                Your tickets will be issued automatically once payment is confirmed.
+                {isCashBooking
+                  ? "A staff member confirms your payment at the counter and issues your tickets. Unpaid reservations are released after the deadline."
+                  : "Your tickets will be issued automatically once payment is confirmed."}
               </p>
             </div>
           </div>

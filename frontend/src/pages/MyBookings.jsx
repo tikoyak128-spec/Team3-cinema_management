@@ -20,6 +20,7 @@ import {
   QrCode,
   X,
   XCircle,
+  CreditCard,
 } from "lucide-react";
 
 const TABS = ["all", "upcoming", "past"];
@@ -262,16 +263,39 @@ function UpcomingCard({ booking, t, i, onCancel, onPay, cancellingId }) {
 
           {booking.status === "pending" && (
             <div className="border-t border-[var(--app-edge)] pt-4 flex flex-col gap-3">
-              <p className="text-[13px] font-semibold text-[var(--app-mute)] leading-relaxed">
-                {t("myBookings.pendingPaymentNote")}
-              </p>
-              <button
-                onClick={() => onPay(booking)}
-                className="inline-flex items-center justify-center gap-2 bg-[#22c55e] hover:bg-[#16a34a] text-white font-bold text-[13px] px-5 py-3 rounded-xl transition-all cursor-pointer w-fit"
-              >
-                <QrCode size={15} />
-                {t("myBookings.resumePayment")}
-              </button>
+              {booking.payment_method === "cash" ? (
+                <>
+                  <p className="text-[13px] font-semibold text-[var(--app-mute)] leading-relaxed">
+                    {t("myBookings.counterPaymentNote")} — show booking code{" "}
+                    <b className="font-mono text-[var(--app-ink)]">
+                      {booking.booking_code || `#${booking.id}`}
+                    </b>{" "}
+                    at the cinema counter and pay before{" "}
+                    <b className="text-[var(--app-ink)]">
+                      {booking.payment_expires_at
+                        ? formatDateTime(booking.payment_expires_at)
+                        : t("myBookings.showtime")}
+                    </b>
+                    .
+                  </p>
+                  <span className="inline-flex items-center gap-2 bg-[rgba(234,179,8,0.14)] border border-[rgba(234,179,8,0.3)] text-[#eab308] text-[12px] font-bold px-3.5 py-2 rounded-xl w-fit">
+                    <CreditCard size={14} /> {t("myBookings.payAtCounter")}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <p className="text-[13px] font-semibold text-[var(--app-mute)] leading-relaxed">
+                    {t("myBookings.pendingPaymentNote")}
+                  </p>
+                  <button
+                    onClick={() => onPay(booking)}
+                    className="inline-flex items-center justify-center gap-2 bg-[#22c55e] hover:bg-[#16a34a] text-white font-bold text-[13px] px-5 py-3 rounded-xl transition-all cursor-pointer w-fit"
+                  >
+                    <QrCode size={15} />
+                    {t("myBookings.resumePayment")}
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>
