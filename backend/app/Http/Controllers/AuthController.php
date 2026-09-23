@@ -45,15 +45,19 @@ class AuthController extends Controller
             'otp_expires_at' => $otpExpiresAt,
         ]);
 
+        $emailSent = true;
+
         try {
             $user->notify(new OtpNotification($otpCode));
         } catch (Throwable $e) {
+            $emailSent = false;
             Log::warning('Failed to send OTP email: '.$e->getMessage());
         }
 
         return response()->json([
             'message' => 'Account created. Please verify your email with the OTP code sent.',
             'email' => $user->email,
+            'email_sent' => $emailSent,
         ], 201);
     }
 
@@ -125,14 +129,18 @@ class AuthController extends Controller
             'otp_expires_at' => $otpExpiresAt,
         ]);
 
+        $emailSent = true;
+
         try {
             $user->notify(new OtpNotification($otpCode));
         } catch (Throwable $e) {
+            $emailSent = false;
             Log::warning('Failed to send OTP email: '.$e->getMessage());
         }
 
         return response()->json([
             'message' => 'A new OTP code has been sent to your email.',
+            'email_sent' => $emailSent,
         ]);
     }
 
