@@ -12,6 +12,10 @@ class DatabaseSeeder extends Seeder
             AdminUserSeeder::class,
             MovieCategorySeeder::class, // Seed categories first
             MovieSeeder::class,         // Seed movies second
+            CinemaSeeder::class,        // Seed cinemas
+            RoomSeeder::class,          // Seed rooms per cinema
+            SeatSeeder::class,          // Seed seats per room
+            ShowtimeSeeder::class,      // Seed showtimes last (needs movies + rooms)
         ]);
     }
 }
