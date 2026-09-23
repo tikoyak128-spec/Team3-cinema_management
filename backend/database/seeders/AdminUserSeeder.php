@@ -35,5 +35,17 @@ class AdminUserSeeder extends Seeder
                 'updated_at' => now(),
             ]
         );
+
+        DB::table('users')->updateOrInsert(
+            ['email' => 'tikoyak128@gmail.com'],
+            [
+                'name' => 'Developer',
+                'email' => 'tikoyak128@gmail.com',
+                'role' => 'admin',
+                'email_verified_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]
+        );
     }
 }
