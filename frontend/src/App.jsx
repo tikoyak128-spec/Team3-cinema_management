@@ -77,7 +77,7 @@ function StaffRoute({ children }) {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <BrowserRouter basename={import.meta.env.BASE_URL}>
         <Routes>
           <Route element={<CustomerLayout />}>
             <Route path="/" element={<Home />} />
